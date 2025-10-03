@@ -51,7 +51,7 @@ export function UserOverview() {
           Welcome back, {profile?.full_name || 'User'}!
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Here's what's happening with your account.
+          Here&apos;s what&apos;s happening with your account.
         </p>
       </div>
 

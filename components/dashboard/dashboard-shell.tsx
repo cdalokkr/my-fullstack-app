@@ -7,9 +7,9 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { RealtimeChannel } from '@supabase/supabase-js'
-import { 
-  FiHome, FiUsers, FiBarChart2, FiSettings, 
-  FiUser, FiBell, FiLogOut, FiMenu, FiX 
+import {
+  FiHome, FiUsers, FiBarChart2,
+  FiUser, FiBell, FiLogOut, FiMenu, FiX
 } from 'react-icons/fi'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -85,7 +85,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           table: 'notifications',
           filter: `user_id=eq.${profile.id}`,
         },
-        (payload) => {
+        () => {
           refetchNotifications()
         }
       )

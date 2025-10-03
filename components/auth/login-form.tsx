@@ -7,7 +7,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useQueryClient } from '@tanstack/react-query'
 import { loginSchema, type LoginInput } from '@/lib/validations/auth'
 import { LoginButton } from '@/components/ui/async-button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +17,6 @@ import { trpc } from '@/lib/trpc/client'
 
 export function LoginForm() {
   const router = useRouter()
-  const queryClient = useQueryClient()
   const { client: trpcClient } = trpc.useContext()
   const [isLoading, setIsLoading] = useState(false)
 
