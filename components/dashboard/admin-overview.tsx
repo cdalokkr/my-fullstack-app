@@ -10,6 +10,7 @@ import { FiUsers, FiActivity, FiTrendingUp } from 'react-icons/fi'
 import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
+import type { Activity, Profile } from '@/types'
 
 export function AdminOverview() {
   const { data: stats, isLoading, refetch } = trpc.admin.getStats.useQuery()
@@ -71,7 +72,7 @@ export function AdminOverview() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back! Here's what's happening.</p>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back! Here&apos;s what&apos;s happening.</p>
       </div>
 
       {/* Stats Cards */}
@@ -106,7 +107,7 @@ export function AdminOverview() {
         <CardContent>
           {recentActivities && recentActivities.length > 0 ? (
             <div className="space-y-4">
-              {recentActivities.map((activity: any) => (
+              {recentActivities.map((activity: Activity & { profiles?: Profile }) => (
                 <div key={activity.id} className="flex items-start gap-4 pb-4 border-b last:border-0 dark:border-gray-700">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">

@@ -25,7 +25,7 @@ export interface Activity {
   user_id: string
   activity_type: ActivityType
   description: string | null
-  metadata: any
+  metadata: Record<string, unknown>
   created_at: string
 }
 
@@ -34,7 +34,7 @@ export interface AnalyticsMetric {
   metric_name: string
   metric_value: number
   metric_date: string
-  metadata: any
+  metadata: Record<string, unknown>
   created_at: string
 }
 

@@ -17,6 +17,7 @@ import { trpc } from '@/lib/trpc/client'
 
 export function LoginForm() {
   const router = useRouter()
+  const { client: trpcClient } = trpc.useContext()
   const [isLoading, setIsLoading] = useState(false)
 
   const {
@@ -100,9 +101,11 @@ export function LoginForm() {
         onStateChange={(state) => {
           setIsLoading(state === 'loading' || state === 'success');
           if (state === 'success') {
-            setTimeout(() => {
-              router.refresh();
-            }, 4000);
+            (async () => {
+              const profile = await trpcClient.profile.get.query();
+              await new Promise(resolve => setTimeout(resolve, 4000));
+              router.push(profile.role === 'admin' ? '/admin' : '/user');
+            })();
           }
         }}
         className="w-full"

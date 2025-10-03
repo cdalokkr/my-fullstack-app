@@ -13,7 +13,7 @@ import { trpc } from '@/lib/trpc/client'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { profileUpdateSchema, type ProfileUpdateInput } from '@/lib/validations/auth'
-import { FiSave, FiUser } from 'react-icons/fi'
+import { FiSave } from 'react-icons/fi'
 import toast from 'react-hot-toast'
 import { Badge } from '@/components/ui/badge'
 
@@ -165,11 +165,11 @@ export function ProfilePage() {
                 <div className="flex gap-3 pt-4">
                   <Button
                     type="submit"
-                    disabled={updateProfileMutation.isLoading}
+                    disabled={updateProfileMutation.isPending}
                     className="gap-2"
                   >
                     <FiSave />
-                    {updateProfileMutation.isLoading ? 'Saving...' : 'Save Changes'}
+                    {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
                   </Button>
                   <Button
                     type="button"
