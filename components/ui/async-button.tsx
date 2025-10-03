@@ -218,7 +218,6 @@ export function AsyncButton({
 // Pre-configured variants for common use cases
 export function LoginButton({ successDuration = 4000, ...props }: Omit<AsyncButtonProps, 'loadingText' | 'successText' | 'loadingPhases'>) {
   const loadingPhases = [
-    { text: "Validating..", duration: 2000 },
     { text: "Authenticating..", duration: 3000 },
   ];
 

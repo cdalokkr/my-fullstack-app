@@ -5,6 +5,7 @@
 import { router, publicProcedure } from '../server'
 import { loginSchema } from '@/lib/validations/auth'
 import { TRPCError } from '@trpc/server'
+import { z } from 'zod'
 
 export const authRouter = router({
   login: publicProcedure
@@ -43,4 +44,17 @@ export const authRouter = router({
     await ctx.supabase.auth.signOut()
     return { success: true }
   }),
+
+  logActivity: publicProcedure
+    .input(z.object({ type: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user) {
+        await ctx.supabase.from('activities').insert({
+          user_id: ctx.user.id,
+          activity_type: input.type,
+          description: `User ${input.type}`,
+        })
+      }
+      return { success: true }
+    }),
 })

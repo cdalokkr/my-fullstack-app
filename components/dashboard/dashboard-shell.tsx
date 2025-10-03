@@ -3,9 +3,10 @@
 // ============================================
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { RealtimeChannel } from '@supabase/supabase-js'
 import { 
   FiHome, FiUsers, FiBarChart2, FiSettings, 
   FiUser, FiBell, FiLogOut, FiMenu, FiX 
@@ -22,8 +23,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { trpc } from '@/lib/trpc/client'
-import toast from 'react-hot-toast'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { LogoutModal } from '@/components/ui/logout-modal'
 import Link from 'next/link'
 import type { Profile } from '@/types'
 
@@ -43,8 +44,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [modalIsOpen, setModalIsOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
+  const [currentStep, setCurrentStep] = useState('')
 
   const supabase = createClient()
+  const channelRef = useRef<RealtimeChannel | null>(null)
+
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
   // Get profile
   const { data: profileData } = trpc.profile.get.useQuery(undefined, {
@@ -65,7 +73,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   // Subscribe to real-time notifications
   useEffect(() => {
-    if (!profile) return
+    if (!profile?.id) return
 
     const channel = supabase
       .channel('notifications')
@@ -79,37 +87,46 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         },
         (payload) => {
           refetchNotifications()
-          toast.success(payload.new.title)
         }
       )
       .subscribe()
 
+    channelRef.current = channel
+
     return () => {
-      supabase.removeChannel(channel)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+      }
     }
   }, [profile, supabase, refetchNotifications])
 
-  const logoutMutation = trpc.auth.logout.useMutation({
-    onSuccess: () => {
-      toast.success('Logged out successfully')
-      router.push('/login')
-      router.refresh()
-    },
-  })
+  const logActivityMutation = trpc.auth.logActivity.useMutation()
 
-  const handleLogout = () => {
-    logoutMutation.mutate()
+  const handleLogout = async () => {
+    setModalIsOpen(true)
+    setIsLoading(true)
+    setCurrentStep('Signing out...')
+
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+    }
+
+    await supabase.auth.signOut()
+
+    setCurrentStep('Logging activity...')
+
+    await logActivityMutation.mutateAsync({ type: 'logout' })
+
+    setIsLoading(false)
+    setIsSuccess(true)
+
+    await delay(2500)
+
+    setModalIsOpen(false)
+    router.push('/login')
   }
 
   const navItems = profile?.role === 'admin' ? adminNavItems : userNavItems
-
-  if (!profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -171,23 +188,23 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <Button variant="ghost" className="gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
-                      {profile.full_name?.[0] || profile.email[0].toUpperCase()}
+                      {profile?.full_name?.[0] || profile?.email?.[0]?.toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <span className="hidden sm:inline-block">
-                    {profile.full_name || profile.email}
+                    {profile?.full_name || profile?.email || 'User'}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
-                    <span>{profile.full_name || 'User'}</span>
+                    <span>{profile?.full_name || 'User'}</span>
                     <span className="text-xs font-normal text-gray-500">
-                      {profile.email}
+                      {profile?.email || 'user@example.com'}
                     </span>
                     <Badge variant="outline" className="mt-1 w-fit text-xs">
-                      {profile.role}
+                      {profile?.role || 'user'}
                     </Badge>
                   </div>
                 </DropdownMenuLabel>
@@ -251,6 +268,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
+
+      <LogoutModal
+        isOpen={modalIsOpen}
+        onClose={() => setModalIsOpen(false)}
+        isLoading={isLoading}
+        isSuccess={isSuccess}
+        currentStep={currentStep}
+      />
     </div>
   )
 }

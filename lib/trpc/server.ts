@@ -5,9 +5,12 @@ import { initTRPC, TRPCError } from '@trpc/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Profile } from '@/types'
 
+let createContextCallCount = 0
+
 export async function createContext() {
+  createContextCallCount++
   const supabase = await createServerSupabaseClient()
-  
+
   const { data: { user } } = await supabase.auth.getUser()
 
   let profile: Profile | null = null
@@ -17,9 +20,9 @@ export async function createContext() {
       .select('*')
       .eq('user_id', user.id)
       .single()
-    
+
     if (process.env.NODE_ENV === 'development') {
-      console.log('DEBUG: createContext - profile query result:', {
+      console.log(`DEBUG: createContext call #${createContextCallCount} - profile query result:`, {
         found: !!data,
         profileId: data?.id,
         profileRole: data?.role,
@@ -29,7 +32,7 @@ export async function createContext() {
         errorHint: error?.hint
       })
     }
-    
+
     profile = data
   }
 
