@@ -102,12 +102,22 @@ export function LoginForm() {
           setIsLoading(state === 'loading' || state === 'success');
           if (state === 'success') {
             (async () => {
-              const profile = await trpcClient.profile.get.query();
-              await new Promise(resolve => setTimeout(resolve, 4000));
+              const fetchPromise = trpcClient.profile.get.query();
+              const delayPromise = new Promise<void>(resolve => setTimeout(resolve, 4000));
+              const [profile] = await Promise.all([fetchPromise, delayPromise]);
+              // Store the fetched user profile in localStorage
+              localStorage.setItem('userProfile', JSON.stringify(profile));
+              // Preload avatar image if available
+              if (profile.avatar_url) {
+                const img = new Image();
+                img.src = profile.avatar_url;
+              }
               router.push(profile.role === 'admin' ? '/admin' : '/user');
             })();
           }
         }}
+        successDuration={4000}
+        autoReset={false}
         className="w-full"
         size="lg"
       >

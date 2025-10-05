@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { trpc } from '@/lib/trpc/client'
 import { Users, Activity, TrendingUp, UserPlus, Settings, BarChart3 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useEffect } from 'react'
 
 interface MetricCardProps {
   title: string
@@ -34,10 +35,14 @@ function MetricCard({ title, value, description, icon, loading }: MetricCardProp
   )
 }
 
-export function AdminOverview() {
+export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: boolean) => void }) {
   const { data: stats, isLoading: statsLoading } = trpc.admin.getStats.useQuery()
   const { data: analytics, isLoading: analyticsLoading } = trpc.admin.getAnalytics.useQuery({ days: 7 })
   const { data: recentActivities, isLoading: activitiesLoading } = trpc.admin.getRecentActivities.useQuery({ limit: 5 })
+
+  useEffect(() => {
+    onLoadingChange(statsLoading || analyticsLoading || activitiesLoading)
+  }, [statsLoading, analyticsLoading, activitiesLoading, onLoadingChange])
 
   // Calculate active users (users with activities in last 7 days)
   const activeUsers = analytics?.reduce((acc, metric) => {
