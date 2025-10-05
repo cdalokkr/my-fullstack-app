@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState, useEffect } from 'react'
+import { ReactNode, useState, useEffect, useMemo, useCallback } from 'react'
 import { trpc } from '@/lib/trpc/client'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { AppSidebar } from './app-sidebar'
@@ -15,9 +15,15 @@ interface DashboardLayoutProps {
   children?: ReactNode
 }
 
-function DashboardContent({ onLoadingChange }: { onLoadingChange: (loading: boolean) => void }) {
-  const { data: profile, isLoading } = trpc.profile.get.useQuery()
-
+function DashboardContent({
+  profile,
+  isLoading,
+  onLoadingChange
+}: {
+  profile: Profile | undefined
+  isLoading: boolean
+  onLoadingChange: (loading: boolean) => void
+}) {
   useEffect(() => {
     onLoadingChange(isLoading)
   }, [isLoading, onLoadingChange])
@@ -51,19 +57,44 @@ function DashboardContent({ onLoadingChange }: { onLoadingChange: (loading: bool
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      {profile.role === 'admin' ? <AdminOverview onLoadingChange={onLoadingChange} /> : <UserOverview onLoadingChange={onLoadingChange} />}
+      {profile.role === 'admin' ? <AdminOverview onLoadingChange={onLoadingChange} /> : <UserOverview profile={profile} onLoadingChange={onLoadingChange} />}
     </div>
   )
 }
 
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { data: profile } = trpc.profile.get.useQuery()
+  // Get initial profile from localStorage for instant load
+  const getInitialProfile = () => {
+    if (typeof window === 'undefined') return undefined
+    const stored = localStorage.getItem('userProfile')
+    if (stored) {
+      try {
+        return JSON.parse(stored) as Profile
+      } catch (error) {
+        console.error('Error parsing stored profile:', error)
+        return undefined
+      }
+    }
+    return undefined
+  }
+
+  const { data: profile, isLoading: profileLoading } = trpc.profile.get.useQuery(undefined, {
+    initialData: getInitialProfile(),
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+  })
+  
   const [contentLoading, setContentLoading] = useState(true)
+  const [showDialog, setShowDialog] = useState(false)
   const [storedProfile, setStoredProfile] = useState<Profile | null>(null)
 
+  // Memoize the setContentLoading callback to prevent unnecessary re-renders
+  const handleLoadingChange = useCallback((loading: boolean) => {
+    setContentLoading(loading)
+  }, [])
+
   useEffect(() => {
-    const stored = localStorage.getItem('profile')
+    const stored = localStorage.getItem('userProfile')
     if (stored) {
       try {
         setStoredProfile(JSON.parse(stored))
@@ -76,18 +107,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     if (profile) {
       setStoredProfile(profile)
-      localStorage.setItem('profile', JSON.stringify(profile))
+      localStorage.setItem('userProfile', JSON.stringify(profile))
     }
   }, [profile])
 
   // Loading messages for the splash screen
   const loadingMessages = [
-    "Loading your profile data...",
-    "Fetching navigation menu...",
-    "Initializing dashboard components..."
+    "Loading profile data...",
+    "Fetching dashboard metrics...",
+    "Loading recent activities...",
   ]
 
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0)
+
+  useEffect(() => {
+    if (contentLoading) {
+      const timer = setTimeout(() => setShowDialog(true), 300)
+      return () => clearTimeout(timer)
+    } else {
+      setShowDialog(false)
+    }
+  }, [contentLoading])
 
   useEffect(() => {
     if (!contentLoading) return
@@ -100,19 +140,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [contentLoading, loadingMessages.length])
 
   // Mock tenant data - in a real app, this would come from an API
-  const tenants = [
+  const tenants = useMemo(() => [
     { id: '1', name: 'Default Organization' }
-  ]
-  const defaultTenant = tenants[0]
+  ], [])
+  const defaultTenant = useMemo(() => tenants[0], [tenants])
 
-  const handleTenantSwitch = (tenantId: string) => {
+  const handleTenantSwitch = useCallback((tenantId: string) => {
     // Handle tenant switching logic here
     console.log('Switching to tenant:', tenantId)
-  }
+  }, [])
 
   return (
     <>
-      <Dialog open={contentLoading}>
+      <Dialog open={showDialog && contentLoading}>
         <DialogContent showCloseButton={false} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Welcome to Your Dashboard</DialogTitle>
@@ -132,7 +172,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         />
         <SidebarInset>
           <TopBar user={storedProfile} />
-          {children || <DashboardContent onLoadingChange={setContentLoading} />}
+          {children || <DashboardContent profile={profile} isLoading={profileLoading} onLoadingChange={handleLoadingChange} />}
         </SidebarInset>
       </SidebarProvider>
     </>

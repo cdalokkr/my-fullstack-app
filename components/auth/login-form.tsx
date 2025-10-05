@@ -102,11 +102,21 @@ export function LoginForm() {
           setIsLoading(state === 'loading' || state === 'success');
           if (state === 'success') {
             (async () => {
-              const fetchPromise = trpcClient.profile.get.query();
+              // Get profile from login response instead of making duplicate fetch
+              const profile = loginMutation.data?.profile;
+              if (!profile) return;
+              
               const delayPromise = new Promise<void>(resolve => setTimeout(resolve, 4000));
-              const [profile] = await Promise.all([fetchPromise, delayPromise]);
+              await delayPromise;
+              
               // Store the fetched user profile in localStorage
               localStorage.setItem('userProfile', JSON.stringify(profile));
+              // Preload admin data if user is admin
+              if (profile.role === 'admin') {
+                trpcClient.admin.getStats.query();
+                trpcClient.admin.getAnalytics.query({ days: 7 });
+                trpcClient.admin.getRecentActivities.query({ limit: 5 });
+              }
               // Preload avatar image if available
               if (profile.avatar_url) {
                 const img = new Image();

@@ -123,20 +123,19 @@ function NotificationsCard({ count, loading }: NotificationsCardProps) {
   )
 }
 
-export function UserOverview({ onLoadingChange }: { onLoadingChange: (loading: boolean) => void }) {
-  const { data: profile, isLoading: profileLoading } = trpc.profile.get.useQuery()
+export function UserOverview({ profile, onLoadingChange }: { profile?: Profile | null | undefined; onLoadingChange: (loading: boolean) => void }) {
   const { data: activities, isLoading: activitiesLoading } = trpc.profile.getActivities.useQuery({ limit: 5 })
   const { data: unreadCount, isLoading: notificationsLoading } = trpc.notification.getUnreadCount.useQuery()
 
   useEffect(() => {
-    onLoadingChange(profileLoading || activitiesLoading || notificationsLoading)
-  }, [profileLoading, activitiesLoading, notificationsLoading, onLoadingChange])
+    onLoadingChange(activitiesLoading || notificationsLoading)
+  }, [activitiesLoading, notificationsLoading, onLoadingChange])
 
   return (
     <div className="space-y-6">
       {/* Profile and Notifications */}
       <div className="grid gap-4 md:grid-cols-2">
-        <ProfileCard profile={profile || null} loading={profileLoading} />
+        <ProfileCard profile={profile || null} loading={false} />
         <NotificationsCard count={unreadCount || 0} loading={notificationsLoading} />
       </div>
 

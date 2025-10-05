@@ -14,6 +14,7 @@ export function LogoutModal({ isOpen, onOpenChange }: LogoutModalProps) {
   const [contentLoading, setContentLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const loadingMessages = [
     "Signing out...",
@@ -29,15 +30,20 @@ export function LogoutModal({ isOpen, onOpenChange }: LogoutModalProps) {
       setContentLoading(true)
       setIsSuccess(false)
       setCurrentMessageIndex(0)
+      setIsLoggingOut(false)
     }
   }, [isOpen])
 
 
   // Trigger logout when modal opens
   useEffect(() => {
-    if (isOpen && contentLoading && !isSuccess) {
+    console.log('Logout effect triggered: isOpen=', isOpen, 'contentLoading=', contentLoading, 'isSuccess=', isSuccess, 'isLoggingOut=', isLoggingOut)
+    if (isOpen && contentLoading && !isSuccess && !isLoggingOut) {
+      console.log('Calling logout mutateAsync')
+      setIsLoggingOut(true)
       logoutMutation.mutateAsync()
         .then(() => {
+          console.log('Logout mutateAsync resolved successfully')
           // Keep loading true during progression
           setTimeout(() => setCurrentMessageIndex(1), 500)
           setTimeout(() => setCurrentMessageIndex(2), 1000)
@@ -57,7 +63,7 @@ export function LogoutModal({ isOpen, onOpenChange }: LogoutModalProps) {
           }, 2500)
         })
     }
-  }, [isOpen, contentLoading, isSuccess, logoutMutation])
+  }, [isOpen, contentLoading, isSuccess, isLoggingOut, logoutMutation])
 
   // Handle success and auto-close with immediate redirect
   useEffect(() => {

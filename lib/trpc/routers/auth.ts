@@ -30,10 +30,22 @@ export const authRouter = router({
         description: 'User logged in',
       })
 
-      return { success: true }
+      // Fetch profile AFTER authentication
+      // ctx.profile is null because context is created before authentication
+      const { data: profileData } = await ctx.supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', data.user.id)
+        .single()
+
+      return {
+        success: true,
+        profile: profileData
+      }
     }),
 
   logout: publicProcedure.mutation(async ({ ctx }) => {
+    console.log('Logout procedure executed for user:', ctx.user?.id)
     if (ctx.user) {
       await ctx.supabase.from('activities').insert({
         user_id: ctx.user.id,

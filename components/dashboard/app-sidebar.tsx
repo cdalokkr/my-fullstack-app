@@ -42,11 +42,15 @@ interface AppSidebarProps {
   user: Profile | null
 }
 
-function NavItemComponent({ item, pathname }: { item: NavItem; pathname: string }) {
+const NavItemComponent = React.memo(({ item, pathname }: { item: NavItem; pathname: string }) => {
   const Icon = Icons[item.icon]
   const isActive = pathname === item.href
   const hasChildren = item.children && item.children.length > 0
   const [open, setOpen] = React.useState(isActive)
+
+  React.useEffect(() => {
+    console.log(`NavItem ${item.title} mounted`)
+  }, [item.title])
 
   console.log(`NavItem ${item.title}: initial open=${open}, isActive=${isActive}, pathname=${pathname}`)
 
@@ -108,11 +112,15 @@ function NavItemComponent({ item, pathname }: { item: NavItem; pathname: string 
       </SidebarMenuButton>
     </SidebarMenuItem>
   )
-}
+})
 
-export function AppSidebar({ role, tenants, defaultTenant, onTenantSwitch, user }: AppSidebarProps) {
+NavItemComponent.displayName = 'NavItemComponent'
+
+export const AppSidebar = React.memo(({ role, tenants, defaultTenant, onTenantSwitch, user }: AppSidebarProps) => {
   const pathname = usePathname()
   const navItems = role === "admin" ? adminNavItems : userNavItems
+
+  console.log('AppSidebar rendering', { pathname, role, tenantsLength: tenants.length, userId: user?.id })
 
   return (
     <Sidebar collapsible="icon">
@@ -139,4 +147,6 @@ export function AppSidebar({ role, tenants, defaultTenant, onTenantSwitch, user 
       </SidebarFooter>
     </Sidebar>
   )
-}
+})
+
+AppSidebar.displayName = 'AppSidebar'
