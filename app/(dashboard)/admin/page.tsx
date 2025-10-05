@@ -1,14 +1,7 @@
-// ============================================
-// app/(dashboard)/admin/page.tsx
-// ============================================
-import { AdminOverview } from '@/components/dashboard/admin-overview'
-import { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Admin Dashboard - Full-Stack App',
-  description: 'Admin control panel',
-}
+import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 
 export default function AdminDashboardPage() {
-  return <AdminOverview />
+  return (
+    <DashboardLayout />
+  )
 }

@@ -1,14 +1,7 @@
-// ============================================
-// app/(dashboard)/user/page.tsx
-// ============================================
-import { UserOverview } from '@/components/dashboard/user-overview'
-import { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Dashboard - Full-Stack App',
-  description: 'User dashboard',
-}
+import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 
 export default function UserDashboardPage() {
-  return <UserOverview />
+  return (
+    <DashboardLayout />
+  )
 }

@@ -1,163 +1,180 @@
-// ============================================
-// components/dashboard/admin-overview.tsx
-// ============================================
 'use client'
 
-import { useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { trpc } from '@/lib/trpc/client'
-import { FiUsers, FiActivity, FiTrendingUp } from 'react-icons/fi'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { createClient } from '@/lib/supabase/client'
-import { Badge } from '@/components/ui/badge'
-import type { Activity, Profile } from '@/types'
+import { trpc } from '@/lib/trpc/client'
+import { Users, Activity, TrendingUp, UserPlus, Settings, BarChart3 } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-export function AdminOverview() {
-  const { data: stats, isLoading, refetch } = trpc.admin.getStats.useQuery()
-  const { data: recentActivities } = trpc.admin.getRecentActivities.useQuery({ limit: 5 })
+interface MetricCardProps {
+  title: string
+  value: string | number
+  description: string
+  icon: React.ReactNode
+  loading?: boolean
+}
 
-  const supabase = createClient()
-
-  // Subscribe to real-time updates
-  useEffect(() => {
-    const channel = supabase
-      .channel('admin-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'activities',
-        },
-        () => {
-          refetch()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [supabase, refetch])
-
-  if (isLoading) {
-    return <AdminOverviewSkeleton />
-  }
-
-  const statCards = [
-    {
-      title: 'Total Users',
-      value: stats?.totalUsers || 0,
-      icon: FiUsers,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-100 dark:bg-blue-900/20',
-    },
-    {
-      title: 'Total Activities',
-      value: stats?.totalActivities || 0,
-      icon: FiActivity,
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-100 dark:bg-green-900/20',
-    },
-    {
-      title: "Today's Activities",
-      value: stats?.todayActivities || 0,
-      icon: FiTrendingUp,
-      color: 'text-purple-600 dark:text-purple-400',
-      bgColor: 'bg-purple-100 dark:bg-purple-900/20',
-    },
-  ]
-
+function MetricCard({ title, value, description, icon, loading }: MetricCardProps) {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back! Here&apos;s what&apos;s happening.</p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {statCards.map((stat) => {
-          const Icon = stat.icon
-          return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {stat.title}
-                </CardTitle>
-                <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                  <Icon className={`h-5 w-5 ${stat.color}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {stat.value.toLocaleString()}
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      {/* Recent Activities */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activities</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentActivities && recentActivities.length > 0 ? (
-            <div className="space-y-4">
-              {recentActivities.map((activity: Activity & { profiles?: Profile }) => (
-                <div key={activity.id} className="flex items-start gap-4 pb-4 border-b last:border-0 dark:border-gray-700">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {activity.profiles?.email || 'Unknown User'}
-                      </p>
-                      <Badge variant="outline" className="text-xs">
-                        {activity.activity_type}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {activity.description}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                      {new Date(activity.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-              No recent activities
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-8 w-16" />
+        ) : (
+          <div className="text-2xl font-bold">{value}</div>
+        )}
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </CardContent>
+    </Card>
   )
 }
 
-function AdminOverviewSkeleton() {
+export function AdminOverview() {
+  const { data: stats, isLoading: statsLoading } = trpc.admin.getStats.useQuery()
+  const { data: analytics, isLoading: analyticsLoading } = trpc.admin.getAnalytics.useQuery({ days: 7 })
+  const { data: recentActivities, isLoading: activitiesLoading } = trpc.admin.getRecentActivities.useQuery({ limit: 5 })
+
+  // Calculate active users (users with activities in last 7 days)
+  const activeUsers = analytics?.reduce((acc, metric) => {
+    if (metric.metric_name === 'active_users') {
+      return acc + metric.metric_value
+    }
+    return acc
+  }, 0) || 0
+
   return (
     <div className="space-y-6">
-      <div>
-        <Skeleton className="h-9 w-64" />
-        <Skeleton className="h-5 w-96 mt-2" />
+      {/* Metric Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          title="Total Users"
+          value={stats?.totalUsers || 0}
+          description="Registered users"
+          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+          loading={statsLoading}
+        />
+        <MetricCard
+          title="Active Users"
+          value={activeUsers}
+          description="Active in last 7 days"
+          icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+          loading={analyticsLoading}
+        />
+        <MetricCard
+          title="Total Activities"
+          value={stats?.totalActivities || 0}
+          description="All user activities"
+          icon={<Activity className="h-4 w-4 text-muted-foreground" />}
+          loading={statsLoading}
+        />
+        <MetricCard
+          title="Today's Activities"
+          value={stats?.todayActivities || 0}
+          description="Activities today"
+          icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
+          loading={statsLoading}
+        />
       </div>
-      <div className="grid gap-6 md:grid-cols-3">
-        {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-5 w-32" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-9 w-20" />
-            </CardContent>
-          </Card>
-        ))}
+
+      {/* Charts Section */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Analytics Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Analytics Overview</CardTitle>
+            <CardDescription>User activity over the last 7 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {analyticsLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={analytics}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="metric_date"
+                    tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                  />
+                  <YAxis />
+                  <Tooltip
+                    labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="metric_value"
+                    stroke="#8884d8"
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Activities */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activities</CardTitle>
+            <CardDescription>Latest user activities</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {activitiesLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {recentActivities?.map((activity) => (
+                  <div key={activity.id} className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50">
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{activity.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(activity.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Common administrative tasks</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add User
+            </Button>
+            <Button variant="outline" size="sm">
+              <Users className="h-4 w-4 mr-2" />
+              Manage Users
+            </Button>
+            <Button variant="outline" size="sm">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              View Reports
+            </Button>
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              System Settings
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
