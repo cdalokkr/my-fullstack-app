@@ -12,8 +12,8 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Full-Stack App - Next.js 15',
-  description: 'Complete authentication and dashboard system',
-  keywords: ['Next.js', 'Supabase', 'tRPC', 'Dashboard'],
+  description: 'Complete authentication system',
+  keywords: ['Next.js', 'Supabase', 'tRPC'],
 }
 
 export default function RootLayout({

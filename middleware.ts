@@ -13,7 +13,7 @@ export async function middleware(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
@@ -69,31 +69,33 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect to dashboard if authenticated and on login page
+  // Redirect to home if authenticated and on login page
   if (user && isLoginRoute) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    const redirectUrl = profile?.role === 'admin' ? '/admin' : '/user'
-    return NextResponse.redirect(new URL(redirectUrl, request.url))
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Check role-based access
+  // Role-based access control
   if (user && (isAdminRoute || isUserRoute)) {
+    // Get user profile to check role
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('user_id', user.id)
       .single()
 
-    if (isAdminRoute && profile?.role !== 'admin') {
+    if (!profile) {
+      // Profile not found, redirect to login
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+
+    // Check if user has correct role for the route
+    if (isAdminRoute && profile.role !== 'admin') {
+      // Non-admin trying to access admin route, redirect to user dashboard
       return NextResponse.redirect(new URL('/user', request.url))
     }
 
-    if (isUserRoute && profile?.role === 'admin') {
+    if (isUserRoute && profile.role !== 'user') {
+      // Non-user trying to access user route, redirect to admin dashboard
       return NextResponse.redirect(new URL('/admin', request.url))
     }
   }

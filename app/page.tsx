@@ -3,8 +3,6 @@
 // ============================================
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import { FiLogIn, FiUser } from 'react-icons/fi'
 import { ThemeToggle } from '@/components/theme-toggle'
 
@@ -14,21 +12,6 @@ export const metadata = {
 }
 
 export default async function HomePage() {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile) {
-      redirect(profile.role === 'admin' ? '/admin' : '/user')
-    }
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Top Bar */}
@@ -60,7 +43,7 @@ export default async function HomePage() {
             Welcome to FullStack App
           </h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-            A complete authentication and dashboard system built with Next.js 15, 
+            A complete authentication system built with Next.js 15,
             Supabase, tRPC, and modern web technologies.
           </p>
           
@@ -103,10 +86,10 @@ export default async function HomePage() {
                 <span className="text-2xl">📊</span>
               </div>
               <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
-                Analytics Dashboard
+                Data Management
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
-                Comprehensive data visualization and insights
+                Secure data handling and user management
               </p>
             </div>
           </div>

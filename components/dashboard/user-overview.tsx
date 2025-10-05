@@ -1,187 +1,170 @@
-// ============================================
-// components/dashboard/user-overview.tsx
-// ============================================
 'use client'
 
-import { useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { trpc } from '@/lib/trpc/client'
-import { FiActivity, FiBell, FiUser } from 'react-icons/fi'
-import { Badge } from '@/components/ui/badge'
-import { createClient } from '@/lib/supabase/client'
+import { User, Activity, Bell, Edit, Settings, Eye } from 'lucide-react'
+import { Profile, Activity as ActivityType } from '@/types'
+
+interface ProfileCardProps {
+  profile: Profile | null
+  loading: boolean
+}
+
+function ProfileCard({ profile, loading }: ProfileCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <User className="h-5 w-5" />
+          Personal Profile
+        </CardTitle>
+        <CardDescription>Your account information</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+        ) : profile ? (
+          <div className="space-y-2">
+            <p className="text-sm">
+              <span className="font-medium">Name:</span> {profile.full_name || 'Not set'}
+            </p>
+            <p className="text-sm">
+              <span className="font-medium">Email:</span> {profile.email}
+            </p>
+            <p className="text-sm">
+              <span className="font-medium">Role:</span> {profile.role}
+            </p>
+            {profile.mobile_no && (
+              <p className="text-sm">
+                <span className="font-medium">Mobile:</span> {profile.mobile_no}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Profile not found</p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+interface ActivitiesCardProps {
+  activities: ActivityType[]
+  loading: boolean
+}
+
+function ActivitiesCard({ activities, loading }: ActivitiesCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Activity className="h-5 w-5" />
+          Recent Activities
+        </CardTitle>
+        <CardDescription>Your latest actions</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : activities.length > 0 ? (
+          <div className="space-y-2">
+            {activities.map((activity) => (
+              <div key={activity.id} className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50">
+                <Activity className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{activity.description || activity.activity_type}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(activity.created_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No recent activities</p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+interface NotificationsCardProps {
+  count: number
+  loading: boolean
+}
+
+function NotificationsCard({ count, loading }: NotificationsCardProps) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Unread Notifications</CardTitle>
+        <Bell className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-8 w-16" />
+        ) : (
+          <div className="text-2xl font-bold">{count}</div>
+        )}
+        <p className="text-xs text-muted-foreground">Pending notifications</p>
+      </CardContent>
+    </Card>
+  )
+}
 
 export function UserOverview() {
-  const { data: profile } = trpc.profile.get.useQuery()
-  const { data: activities, refetch } = trpc.profile.getActivities.useQuery({ limit: 10 })
-  const { data: notifications } = trpc.notification.getAll.useQuery()
-
-  const supabase = createClient()
-
-  // Subscribe to real-time updates
-  useEffect(() => {
-    if (!profile) return
-
-    const channel = supabase
-      .channel('user-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'activities',
-          filter: `user_id=eq.${profile.id}`,
-        },
-        () => {
-          refetch()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [profile, supabase, refetch])
-
-  const recentNotifications = notifications?.slice(0, 5) || []
+  const { data: profile, isLoading: profileLoading } = trpc.profile.get.useQuery()
+  const { data: activities, isLoading: activitiesLoading } = trpc.profile.getActivities.useQuery({ limit: 5 })
+  const { data: unreadCount, isLoading: notificationsLoading } = trpc.notification.getUnreadCount.useQuery()
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Welcome back, {profile?.full_name || 'User'}!
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Here&apos;s what&apos;s happening with your account.
-        </p>
+      {/* Profile and Notifications */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <ProfileCard profile={profile || null} loading={profileLoading} />
+        <NotificationsCard count={unreadCount || 0} loading={notificationsLoading} />
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Profile Completion
-            </CardTitle>
-            <FiUser className="h-5 w-5 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white">
-              {profile?.full_name && profile?.avatar_url ? '100%' : '50%'}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Recent Activities */}
+      <ActivitiesCard activities={activities || []} loading={activitiesLoading} />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Recent Activities
-            </CardTitle>
-            <FiActivity className="h-5 w-5 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white">
-              {activities?.length || 0}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Notifications
-            </CardTitle>
-            <FiBell className="h-5 w-5 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white">
-              {recentNotifications.length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Activities */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activities</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {activities && activities.length > 0 ? (
-              <div className="space-y-4">
-                {activities.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-start gap-4 pb-4 border-b last:border-0 dark:border-gray-700"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {activity.activity_type}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {activity.description}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        {new Date(activity.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-                No recent activities
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Notifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentNotifications.length > 0 ? (
-              <div className="space-y-4">
-                {recentNotifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-4 rounded-lg border ${
-                      notification.is_read
-                        ? 'bg-gray-50 dark:bg-gray-800'
-                        : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white">
-                          {notification.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                          {new Date(notification.created_at).toLocaleString()}
-                        </p>
-                      </div>
-                      {!notification.is_read && (
-                        <div className="w-2 h-2 bg-blue-600 rounded-full" />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-                No notifications
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Manage your profile and settings</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Profile
+            </Button>
+            <Button variant="outline" size="sm">
+              <Bell className="h-4 w-4 mr-2" />
+              View Notifications
+            </Button>
+            <Button variant="outline" size="sm">
+              <Eye className="h-4 w-4 mr-2" />
+              Activity History
+            </Button>
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              Account Settings
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
