@@ -3,11 +3,15 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import dynamic from 'next/dynamic'
 import { ChevronRight } from "lucide-react"
 import { UserRole, Profile } from "@/types"
 import { Icons } from "@/components/icons"
 import { OrgSwitcher } from "@/components/org-switcher"
-import { UserProfilePopover } from "./user-profile-popover"
+const UserProfilePopover = dynamic(() => import("./user-profile-popover").then(mod => ({ default: mod.UserProfilePopover })), {
+  ssr: false,
+  loading: () => <div className="flex items-center gap-2 rounded-md text-left w-full p-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"><div className="h-8 w-8 rounded-full bg-muted animate-pulse"></div></div>
+});
 import { adminNavItems, userNavItems, type NavItem } from "./nav-items"
 import {
   Sidebar,

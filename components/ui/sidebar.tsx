@@ -81,12 +81,17 @@ function SidebarProvider({
       } else {
         _setOpen(openState)
       }
-
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
     },
     [setOpenProp, open]
   )
+
+  // Set cookie when open state changes, but only on client side
+  React.useEffect(() => {
+    // Only set cookie on client side to avoid hydration mismatches
+    if (typeof window !== 'undefined') {
+      document.cookie = `${SIDEBAR_COOKIE_NAME}=${open}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+    }
+  }, [open])
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
@@ -606,10 +611,21 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<"div"> & {
   showIcon?: boolean
 }) {
-  // Random width between 50 to 90%.
+  // Use a deterministic width based on a hash of the component's props
+  // to prevent hydration mismatches while still providing visual variety
   const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`
-  }, [])
+    // Create a simple hash from the props to generate a consistent width
+    const propsString = JSON.stringify({ showIcon, className })
+    let hash = 0
+    for (let i = 0; i < propsString.length; i++) {
+      const char = propsString.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32-bit integer
+    }
+    // Use the absolute value of the hash to determine width between 50-90%
+    const widthValue = Math.abs(hash % 40) + 50
+    return `${widthValue}%`
+  }, [showIcon, className])
 
   return (
     <div

@@ -9,7 +9,7 @@ export interface NavItem {
 export const adminNavItems: NavItem[] = [
   {
     title: "Dashboard",
-    href: "/admin/dashboard",
+    href: "/admin",
     icon: "Home",
   },
   {
