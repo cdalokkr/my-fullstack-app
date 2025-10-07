@@ -46,3 +46,20 @@ export interface Notification {
   is_read: boolean
   created_at: string
 }
+
+export interface AdminStats {
+  totalUsers: number
+  totalActivities: number
+  todayActivities: number
+}
+
+export interface DashboardData {
+  stats: AdminStats
+  analytics: AnalyticsMetric[]
+  recentActivities: (Activity & { profiles?: { email: string; full_name: string } })[]
+  metadata: {
+    fetchedAt: string
+    version: string
+    cacheExpiry: number
+  }
+}

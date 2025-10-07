@@ -1,0 +1,115 @@
+{
+  "summary": {
+    "totalTests": 8,
+    "passedTests": 8,
+    "failedTests": 0,
+    "startTime": "2025-10-07T02:38:26.341Z",
+    "endTime": "2025-10-07T02:38:26.392Z",
+    "duration": 51
+  },
+  "tests": [
+    {
+      "name": "Progressive hook structure is correct",
+      "passed": true,
+      "details": "Critical: true, Secondary: true, Detailed: true, Dependencies: true",
+      "metrics": {
+        "hasCriticalQuery": true,
+        "hasSecondaryQuery": true,
+        "hasDetailedQuery": true,
+        "hasDependencyLogic": true,
+        "hasProperCaching": true
+      },
+      "timestamp": "2025-10-07T02:38:26.365Z"
+    },
+    {
+      "name": "Component has progressive loading structure",
+      "passed": true,
+      "details": "SectionWrapper: true, TestIds: true, Progressive: true, ErrorHandling: true, Animations: true",
+      "metrics": {
+        "hasSectionWrapper": true,
+        "hasTestIds": true,
+        "hasProgressiveSections": true,
+        "hasErrorHandling": true,
+        "hasAnimations": true
+      },
+      "timestamp": "2025-10-07T02:38:26.374Z"
+    },
+    {
+      "name": "Skeleton components exist",
+      "passed": true,
+      "details": "Activity: true, Chart: true, Metric: true, Index: true",
+      "metrics": {
+        "hasActivitySkeleton": true,
+        "hasChartSkeleton": true,
+        "hasMetricSkeleton": true,
+        "hasIndexFile": true,
+        "totalSkeletonFiles": 4
+      },
+      "timestamp": "2025-10-07T02:38:26.384Z"
+    },
+    {
+      "name": "Progressive API endpoints exist",
+      "passed": true,
+      "details": "Critical: true, Secondary: true, Detailed: true, Caching: true, Tiers: true",
+      "metrics": {
+        "hasCriticalEndpoint": true,
+        "hasSecondaryEndpoint": true,
+        "hasDetailedEndpoint": true,
+        "hasProperCaching": true,
+        "hasTierMetadata": true
+      },
+      "timestamp": "2025-10-07T02:38:26.386Z"
+    },
+    {
+      "name": "Test IDs properly placed",
+      "passed": true,
+      "details": "Critical: true, Secondary: true, Detailed: true, Section: true, Error: true, Retry: true, Refresh: true",
+      "metrics": {
+        "hasCriticalTestId": true,
+        "hasSecondaryTestId": true,
+        "hasDetailedTestId": true,
+        "hasSectionWrapperTestId": true,
+        "hasErrorBoundaryTestId": true,
+        "hasRetryButtonTestId": true,
+        "hasRefreshButtonTestId": true
+      },
+      "timestamp": "2025-10-07T02:38:26.388Z"
+    },
+    {
+      "name": "Skeleton components have test IDs",
+      "passed": true,
+      "details": "Skeleton test IDs: {\n  \"components/dashboard/skeletons/activity-skeleton.tsx\": true,\n  \"components/dashboard/skeletons/chart-skeleton.tsx\": true,\n  \"components/dashboard/skeletons/metric-card-skeleton.tsx\": true\n}",
+      "metrics": {
+        "components/dashboard/skeletons/activity-skeleton.tsx": true,
+        "components/dashboard/skeletons/chart-skeleton.tsx": true,
+        "components/dashboard/skeletons/metric-card-skeleton.tsx": true
+      },
+      "timestamp": "2025-10-07T02:38:26.390Z"
+    },
+    {
+      "name": "Loading sequence logic is correct",
+      "passed": true,
+      "details": "Critical→Secondary: true, Secondary→Detailed: true, Refetch: true",
+      "metrics": {
+        "criticalToSecondary": true,
+        "secondaryToDetailed": true,
+        "hasProperRefetch": true
+      },
+      "timestamp": "2025-10-07T02:38:26.391Z"
+    },
+    {
+      "name": "Performance optimizations implemented",
+      "passed": true,
+      "details": "StaleTime: true, Memoization: true, NoRefetchOnFocus: true, AppropriateCacheTimes: true",
+      "metrics": {
+        "hasStaleTime": true,
+        "hasMemoization": true,
+        "hasRefetchOnWindowFocusDisabled": true,
+        "hasAppropriateCacheTimes": true
+      },
+      "timestamp": "2025-10-07T02:38:26.391Z"
+    }
+  ],
+  "networkAnalysis": {},
+  "performanceAnalysis": {}
+}

@@ -8,6 +8,7 @@ import { AppSidebar } from './app-sidebar'
 import { TopBar } from './top-bar'
 import { AdminOverview } from './admin-overview'
 import { UserOverview } from './user-overview'
+import { StatusBar } from './status-bar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Profile } from '@/types'
@@ -195,9 +196,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           onTenantSwitch={handleTenantSwitch}
           user={currentUser}
         />
-        <SidebarInset>
+        <SidebarInset className="flex flex-col min-h-screen">
           <TopBar user={currentUser} />
-          {children || <DashboardContent profile={profile} isLoading={profileLoading} onLoadingChange={handleLoadingChange} />}
+          <div className="flex-1">
+            {children || <DashboardContent profile={profile} isLoading={profileLoading} onLoadingChange={handleLoadingChange} />}
+          </div>
+          <StatusBar />
         </SidebarInset>
       </SidebarProvider>
     </>
