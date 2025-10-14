@@ -30,11 +30,6 @@ export const adminNavItems: NavItem[] = [
     ],
   },
   {
-    title: "Analytics",
-    href: "/admin/analytics",
-    icon: "BarChart2",
-  },
-  {
     title: "Settings",
     href: "/admin/settings",
     icon: "User",

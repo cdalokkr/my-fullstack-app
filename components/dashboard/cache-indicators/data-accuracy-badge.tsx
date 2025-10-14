@@ -175,11 +175,6 @@ export function DataAccuracyBadge({
     lg: 'h-6 px-3 text-sm'
   }
 
-  const iconSizeClasses = {
-    sm: 'h-3 w-3',
-    md: 'h-3 w-3',
-    lg: 'h-4 w-4'
-  }
 
   const badgeContent = (
     <Badge 

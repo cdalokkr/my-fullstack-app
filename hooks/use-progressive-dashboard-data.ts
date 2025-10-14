@@ -122,8 +122,17 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch critical data: ${response.status} ${response.statusText}`)
+      }
+
       const data = await response.json()
-      
+
+      if (!data?.result?.data) {
+        throw new Error('Invalid response structure for critical data')
+      }
+
       // Store in cache with adaptive TTL
       await smartCacheManager.set(cacheKey, data.result.data, {
         namespace,
@@ -160,8 +169,17 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch secondary data: ${response.status} ${response.statusText}`)
+      }
+
       const data = await response.json()
-      
+
+      if (!data?.result?.data) {
+        throw new Error('Invalid response structure for secondary data')
+      }
+
       // Store in cache with adaptive TTL
       await smartCacheManager.set(cacheKey, data.result.data, {
         namespace,
@@ -182,9 +200,9 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
   const fetchDetailedData = useCallback(async () => {
     const cacheKey = 'detailed-dashboard-data'
     const namespace = 'dashboard'
-    
+
     setCacheStatus(prev => ({ ...prev, detailed: { ...prev.detailed, loading: true } }))
-    
+
     try {
       // Try to get from cache first
       const cachedData = await smartCacheManager.get<DetailedData>(cacheKey, namespace)
@@ -194,12 +212,21 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
       }
 
       // Fetch from API if not in cache
-      const response = await fetch('/api/trpc/admin.getDetailedDashboardData?input=%7B%22limit%22%3A10%7D', {
+      const response = await fetch('/api/trpc/admin.getDetailedDashboardData', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch detailed data: ${response.status} ${response.statusText}`)
+      }
+
       const data = await response.json()
-      
+
+      if (!data?.result?.data) {
+        throw new Error('Invalid response structure for detailed data')
+      }
+
       // Store in cache with adaptive TTL
       await smartCacheManager.set(cacheKey, data.result.data, {
         namespace,
@@ -221,7 +248,7 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
     const setupBackgroundRefresh = () => {
       // Register background refresh tasks
       backgroundRefresher.registerRefreshTask({
-        key: 'critical-dashboard-data',
+        key: 'dashboard:critical-dashboard-data',
         namespace: 'dashboard',
         dataType: 'critical-dashboard-data',
         priority: 'critical',
@@ -232,7 +259,7 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
       })
 
       backgroundRefresher.registerRefreshTask({
-        key: 'secondary-dashboard-data',
+        key: 'dashboard:secondary-dashboard-data',
         namespace: 'dashboard',
         dataType: 'secondary-dashboard-data',
         priority: 'important',
@@ -243,11 +270,11 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
       })
 
       backgroundRefresher.registerRefreshTask({
-        key: 'detailed-dashboard-data',
+        key: 'dashboard:detailed-dashboard-data',
         namespace: 'dashboard',
         dataType: 'detailed-dashboard-data',
         priority: 'normal',
-        refreshFunction: fetchDetailedData,
+        refreshFunction: () => fetchDetailedData(),
         maxRetries: 3,
         backoffMultiplier: 2,
         context: getTTLContext('detailed-dashboard-data')
@@ -310,15 +337,12 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
     }
   )
 
-  const detailedQuery = trpc.admin.getDetailedDashboardData.useQuery(
-    { limit: 10 },
-    {
-      enabled: !!secondaryQuery.data,
-      staleTime: 60 * 1000, // 60 seconds
-      refetchOnWindowFocus: false,
-      queryFn: fetchDetailedData,
-    }
-  )
+  const detailedQuery = trpc.admin.getDetailedDashboardData.useQuery(undefined, {
+    enabled: !!secondaryQuery.data,
+    staleTime: 60 * 1000, // 60 seconds
+    refetchOnWindowFocus: false,
+    queryFn: fetchDetailedData,
+  })
 
   // Enhanced refetch functions with cache invalidation
   const refetchCritical = useCallback(() => {

@@ -7,7 +7,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useState, useEffect } from 'react'
-import { Wifi, WifiOff, RefreshCw, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
+import { WifiOff, RefreshCw, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
 
 interface CacheStatus {
   hitRate: number

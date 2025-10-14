@@ -1,11 +1,21 @@
 'use client'
 
+import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useProgressiveDashboardData } from '@/hooks/use-progressive-dashboard-data'
 import { ChartSkeleton, ActivitySkeleton } from '@/components/dashboard/skeletons'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { createUserSchema, type CreateUserInput } from '@/lib/validations/auth'
+import { AsyncButton } from '@/components/ui/async-button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { trpc } from '@/lib/trpc/client'
+import toast from 'react-hot-toast'
 import {
   Users,
   Activity,
@@ -14,7 +24,8 @@ import {
   Settings,
   BarChart3,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useEffect, useState } from 'react'
@@ -25,14 +36,18 @@ interface MetricCardProps {
   description: string
   icon: React.ReactNode
   loading?: boolean
+  iconBgColor?: string
+  iconColor?: string
 }
 
-function MetricCard({ title, value, description, icon, loading }: MetricCardProps) {
+function MetricCard({ title, value, description, icon, loading, iconBgColor, iconColor }: MetricCardProps) {
   return (
-    <Card className="transition-all duration-300 ease-in-out">
+    <Card className="shadow-lg">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon}
+        <CardTitle className="text-xl font-medium">{title}</CardTitle>
+        <div className={`p-2 rounded-full ${iconBgColor || 'bg-gray-100'}`}>
+          {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, { className: `h-8 w-8 ${iconColor || 'text-muted-foreground'}` }) : icon}
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -48,7 +63,6 @@ function MetricCard({ title, value, description, icon, loading }: MetricCardProp
 
 interface SectionWrapperProps {
   children: React.ReactNode
-  isLoading: boolean
   isError: boolean
   error: unknown
   onRetry: () => void
@@ -56,27 +70,14 @@ interface SectionWrapperProps {
   className?: string
 }
 
-function SectionWrapper({ 
-  children, 
-  isLoading, 
-  isError, 
-  error, 
-  onRetry, 
-  title, 
-  className = "" 
+function SectionWrapper({
+  children,
+  isError,
+  error,
+  onRetry,
+  title,
+  className = ""
 }: SectionWrapperProps) {
-  const [isVisible, setIsVisible] = useState(false)
-
-  useEffect(() => {
-    if (!isLoading && !isError) {
-      // Trigger fade-in animation when content is ready
-      const timer = setTimeout(() => setIsVisible(true), 50)
-      return () => clearTimeout(timer)
-    } else {
-      setIsVisible(false)
-    }
-  }, [isLoading, isError])
-
   if (isError) {
     return (
       <div data-testid="error-boundary" className={`space-y-4 ${className}`}>
@@ -97,9 +98,7 @@ function SectionWrapper({
   return (
     <div
       data-testid="section-wrapper"
-      className={`transition-opacity duration-500 ease-in-out ${
-        isVisible ? 'opacity-100' : 'opacity-0'
-      } ${className}`}
+      className={className}
     >
       {children}
     </div>
@@ -107,6 +106,48 @@ function SectionWrapper({
 }
 
 export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: boolean) => void }) {
+   const [showCreateUserForm, setShowCreateUserForm] = useState(false)
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    getValues,
+    trigger,
+    formState: { errors: formErrors },
+  } = useForm<CreateUserInput>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: {
+      role: 'user',
+    },
+  })
+
+  const utils = trpc.useUtils()
+
+  const createUserMutation = trpc.admin.createUser.useMutation({
+    onSuccess: () => {
+      toast.success('User created successfully!')
+      reset()
+      refetch.all()
+      // Invalidate and refetch user-related queries
+      utils.admin.getUsers.invalidate()
+      utils.admin.getCriticalDashboardData.invalidate()
+      // Delay closing the form to match AsyncButton's successDuration
+      setTimeout(() => {
+        setShowCreateUserForm(false)
+      }, 2000)
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create user')
+    },
+  })
+
+  const onSubmit = async (data: CreateUserInput) => {
+    await createUserMutation.mutateAsync(data)
+  }
+
   const {
     criticalData,
     secondaryData,
@@ -150,6 +191,176 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
     )
   }
 
+  if (showCreateUserForm) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Create New User</CardTitle>
+                <CardDescription>
+                  Add a new user to the system. They will receive an email invitation to set up their account.
+                </CardDescription>
+              </div>
+              <Button variant="destructive" onClick={() => setShowCreateUserForm(false)}>
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {/* Row 1: First Name and Last Name */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* First Name Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="John"
+                    {...register('firstName')}
+                  />
+                  {formErrors.firstName && (
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {formErrors.firstName.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Last Name Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Doe"
+                    {...register('lastName')}
+                  />
+                  {formErrors.lastName && (
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {formErrors.lastName.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 2: Date of Birth, Mobile Number, and Role */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Date of Birth Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    {...register('dateOfBirth')}
+                  />
+                  {formErrors.dateOfBirth && (
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {formErrors.dateOfBirth.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Mobile Number Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="mobileNo">Mobile Number</Label>
+                  <Input
+                    id="mobileNo"
+                    type="tel"
+                    placeholder="+1234567890"
+                    {...register('mobileNo')}
+                  />
+                  {formErrors.mobileNo && (
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {formErrors.mobileNo.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Role Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role *</Label>
+                  <Select
+                    value={watch('role')}
+                    onValueChange={(value: 'admin' | 'user') => setValue('role', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formErrors.role && (
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {formErrors.role.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 3: Email and Password */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="user@example.com"
+                    {...register('email')}
+                  />
+                  {formErrors.email && (
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {formErrors.email.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Password Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Minimum 8 characters"
+                    {...register('password')}
+                  />
+                  {formErrors.password && (
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {formErrors.password.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <AsyncButton
+                onClick={async () => {
+                  const isValid = await trigger()
+                  if (!isValid) {
+                    throw new Error('Please check your input')
+                  }
+                  const data = getValues()
+                  await onSubmit(data)
+                }}
+                loadingText="Creating user..."
+                successText="User created!"
+                errorText="Failed to create user"
+                successDuration={2000}
+                className="w-full"
+              >
+                Create User
+              </AsyncButton>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header with refresh button */}
@@ -173,7 +384,6 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
 
       {/* Tier 1: Critical Metrics - Always visible first */}
       <SectionWrapper
-        isLoading={isLoading.critical}
         isError={isError.critical}
         error={errors.critical}
         onRetry={refetch.critical}
@@ -186,6 +396,8 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
             description="Registered users"
             icon={<Users className="h-4 w-4 text-muted-foreground" />}
             loading={isLoading.critical}
+            iconBgColor="bg-blue-100"
+            iconColor="text-blue-600"
           />
           <MetricCard
             title="Active Users"
@@ -193,6 +405,8 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
             description="Active in last 7 days"
             icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
             loading={isLoading.critical}
+            iconBgColor="bg-green-100"
+            iconColor="text-green-600"
           />
           <MetricCard
             title="Total Activities"
@@ -200,6 +414,8 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
             description="All user activities"
             icon={<Activity className="h-4 w-4 text-muted-foreground" />}
             loading={isLoading.secondary}
+            iconBgColor="bg-purple-100"
+            iconColor="text-purple-600"
           />
           <MetricCard
             title="Today's Activities"
@@ -207,6 +423,8 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
             description="Activities today"
             icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
             loading={isLoading.secondary}
+            iconBgColor="bg-orange-100"
+            iconColor="text-orange-600"
           />
         </div>
         
@@ -220,7 +438,11 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCreateUserForm(true)}
+            >
               <UserPlus className="h-4 w-4 mr-2" />
               Add User
             </Button>
@@ -243,7 +465,6 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
       {/* Tier 2: Analytics Chart - Load after critical data */}
       {criticalData && (
         <SectionWrapper
-          isLoading={isLoading.secondary}
           isError={isError.secondary}
           error={errors.secondary}
           onRetry={refetch.secondary}
@@ -286,7 +507,6 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
       {/* Tier 3: Recent Activities - Load after secondary data */}
       {secondaryData && (
         <SectionWrapper
-          isLoading={isLoading.detailed}
           isError={isError.detailed}
           error={errors.detailed}
           onRetry={refetch.detailed}

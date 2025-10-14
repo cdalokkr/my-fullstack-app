@@ -50,20 +50,13 @@ const NavItemComponent = React.memo(({ item, pathname }: { item: NavItem; pathna
   const Icon = Icons[item.icon]
   const isActive = pathname === item.href
   const hasChildren = item.children && item.children.length > 0
-  const [open, setOpen] = React.useState(isActive)
+  const [open, setOpen] = React.useState(false)
 
   React.useEffect(() => {
-    console.log(`NavItem ${item.title} mounted`)
-  }, [item.title])
-
-  console.log(`NavItem ${item.title}: initial open=${open}, isActive=${isActive}, pathname=${pathname}`)
-
-  React.useEffect(() => {
-    console.log(`NavItem ${item.title}: pathname changed to ${pathname}, current open=${open}`)
-  }, [pathname, item.title, open])
+    setOpen(isActive)
+  }, [isActive])
 
   const handleOpenChange = (newOpen: boolean) => {
-    console.log(`NavItem ${item.title}: open changing from ${open} to ${newOpen}`)
     setOpen(newOpen)
   }
 
@@ -123,8 +116,6 @@ NavItemComponent.displayName = 'NavItemComponent'
 export const AppSidebar = React.memo(({ role, tenants, defaultTenant, onTenantSwitch, user }: AppSidebarProps) => {
   const pathname = usePathname()
   const navItems = role === "admin" ? adminNavItems : userNavItems
-
-  console.log('AppSidebar rendering', { pathname, role, tenantsLength: tenants.length, userId: user?.id })
 
   return (
     <Sidebar collapsible="icon">
