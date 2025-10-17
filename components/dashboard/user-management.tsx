@@ -32,13 +32,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Edit, Trash2, Plus, X, Save, AlertTriangle } from 'lucide-react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { createUserSchema, type CreateUserInput } from '@/lib/validations/auth'
-import { AsyncButton } from '@/components/ui/async-button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { AsyncButton } from '@/components/ui/async-button'
+import { CreateUserForm } from './create-user-form'
 import toast from 'react-hot-toast'
 
 export default function UserManagement() {
@@ -49,43 +46,7 @@ export default function UserManagement() {
   const [tempRole, setTempRole] = useState<UserRole>('user')
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-    getValues,
-    trigger,
-    formState: { errors: formErrors },
-  } = useForm<CreateUserInput>({
-    resolver: zodResolver(createUserSchema),
-    defaultValues: {
-      role: 'user',
-    },
-  })
-
   const utils = trpc.useUtils()
-
-  const createUserMutation = trpc.admin.createUser.useMutation({
-    onSuccess: () => {
-      toast.success('User created successfully!')
-      reset()
-      refetch()
-      utils.admin.getUsers.invalidate()
-      utils.admin.getCriticalDashboardData.invalidate()
-      setTimeout(() => {
-        setShowCreateUserForm(false)
-      }, 2000)
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to create user')
-    },
-  })
-
-  const onSubmit = async (data: CreateUserInput) => {
-    await createUserMutation.mutateAsync(data)
-  }
 
   const { data: usersData, isLoading, error, refetch } = trpc.admin.getUsers.useQuery({
     page: 1,
@@ -161,171 +122,15 @@ export default function UserManagement() {
 
   if (showCreateUserForm) {
     return (
-      <div className="space-y-6 pt-6 pl-6 pr-6">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Create New User</CardTitle>
-                <CardDescription>
-                  Add a new user to the system. They will receive an email invitation to set up their account.
-                </CardDescription>
-              </div>
-              <Button variant="destructive" onClick={() => setShowCreateUserForm(false)}>
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Row 1: First Name and Last Name */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* First Name Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    type="text"
-                    placeholder="John"
-                    {...register('firstName')}
-                  />
-                  {formErrors.firstName && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.firstName.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Last Name Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    type="text"
-                    placeholder="Doe"
-                    {...register('lastName')}
-                  />
-                  {formErrors.lastName && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.lastName.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Row 2: Date of Birth, Mobile Number, and Role */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Date of Birth Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                  <Input
-                    id="dateOfBirth"
-                    type="date"
-                    {...register('dateOfBirth')}
-                  />
-                  {formErrors.dateOfBirth && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.dateOfBirth.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Mobile Number Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="mobileNo">Mobile Number</Label>
-                  <Input
-                    id="mobileNo"
-                    type="tel"
-                    placeholder="+1234567890"
-                    {...register('mobileNo')}
-                  />
-                  {formErrors.mobileNo && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.mobileNo.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Role Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select
-                    value={watch('role')}
-                    onValueChange={(value: 'admin' | 'user') => setValue('role', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {formErrors.role && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.role.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Row 3: Email and Password */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Email Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="user@example.com"
-                    {...register('email')}
-                  />
-                  {formErrors.email && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Password Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Minimum 8 characters"
-                    {...register('password')}
-                  />
-                  {formErrors.password && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.password.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <AsyncButton
-                onClick={async () => {
-                  const isValid = await trigger()
-                  if (!isValid) {
-                    throw new Error('Please check your input')
-                  }
-                  const data = getValues()
-                  await onSubmit(data)
-                }}
-                loadingText="Creating user..."
-                successText="User created!"
-                errorText="Failed to create user"
-                successDuration={2000}
-                className="w-full"
-              >
-                Create User
-              </AsyncButton>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+      <CreateUserForm
+        mode="inline"
+        onCancel={() => setShowCreateUserForm(false)}
+        onSuccess={() => {
+          refetch()
+          utils.admin.getUsers.invalidate()
+          utils.admin.getCriticalDashboardData.invalidate()
+        }}
+      />
     )
   }
 
@@ -346,7 +151,7 @@ export default function UserManagement() {
         </CardHeader>
         <CardContent className="px-6 py-0 pt-0">
           <Table className="border border-border rounded-lg shadow-sm">
-            <TableHeader className="bg-blue-500/30 [&_tr]:border-0">
+            <TableHeader className="bg-blue-500/70 [&_tr]:border-0 hover:[&_tr]:bg-blue-500/10">
               <TableRow>
                 <TableHead>Email</TableHead>
                 <TableHead>First Name</TableHead>
@@ -384,7 +189,7 @@ export default function UserManagement() {
                       key={user.id}
                       onDoubleClick={() => handleEditUser(user)}
                       className={`transition-colors duration-200 ${
-                        editingUserId === user.id ? 'bg-muted' : ''
+                        editingUserId === user.id ? 'bg-green-50' : 'bg-transparent hover:bg-blue-500/10'
                       }`}
                     >
                       <TableCell>{user.email}</TableCell>
@@ -442,7 +247,8 @@ export default function UserManagement() {
                             <>
                               <AsyncButton
                                 size="sm"
-                                className='bg-blue-500 hover:bg-blue-500/80'
+                                variant="outline"
+                                className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
                                 onClick={handleUpdateUser}
 
                                 loadingText="Saving..."
@@ -466,7 +272,7 @@ export default function UserManagement() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="bg-red-500/30 hover:bg-red-500/50"
+                                className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300"
                                 onClick={handleCancelEdit}
                               >
                                 <X className="h-4 w-4 mr-2" />
@@ -478,7 +284,7 @@ export default function UserManagement() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className='bg-blue-500/20 hover:bg-blue-500/30'
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
                                 onClick={() => handleEditUser(user)}
                               >
                                 <Edit className="h-4 w-4 mr-2" />
@@ -489,7 +295,7 @@ export default function UserManagement() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="bg-red-500/30 hover:bg-red-500/50"
+                                    className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300"
                                     onClick={() => setDeleteUserId(user.id)}
                                   >
                                     <Trash2 className="h-4 w-4 mr-2" />
@@ -507,11 +313,11 @@ export default function UserManagement() {
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogCancel className="bg-primary/10 hover:bg-primary/30">Cancel</AlertDialogCancel>
                                     <AlertDialogAction
                                       onClick={handleDeleteUser}
                                       disabled={deleteUserMutation.isPending}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/70 text-white"
                                     >
                                       {deleteUserMutation.isPending ? 'Deleting...' : 'Delete'}
                                     </AlertDialogAction>

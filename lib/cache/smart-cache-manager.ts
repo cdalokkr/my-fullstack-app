@@ -310,7 +310,7 @@ class SmartCacheManager {
     }
 
     const now = Date.now();
-    
+
     // Check if entry is expired
     if (now - entry.timestamp > entry.ttl) {
       this.delete(fullKey);
@@ -325,7 +325,7 @@ class SmartCacheManager {
     this.stats.hits++;
 
     // Decompress data if needed
-    return this.decompressData(entry);
+    return this.decompressData(entry) as Promise<T>;
   }
 
   delete(key: string, namespace?: string): boolean {

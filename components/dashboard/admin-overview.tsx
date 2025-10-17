@@ -6,16 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useProgressiveDashboardData } from '@/hooks/use-progressive-dashboard-data'
-import { ChartSkeleton, ActivitySkeleton } from '@/components/dashboard/skeletons'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { createUserSchema, type CreateUserInput } from '@/lib/validations/auth'
-import { AsyncButton } from '@/components/ui/async-button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { trpc } from '@/lib/trpc/client'
-import toast from 'react-hot-toast'
+import { ActivitySkeleton } from '@/components/dashboard/skeletons'
+import { CreateUserForm } from './create-user-form'
 import {
   Users,
   Activity,
@@ -24,10 +16,8 @@ import {
   Settings,
   BarChart3,
   RefreshCw,
-  AlertCircle,
-  X
+  AlertCircle
 } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useEffect, useState } from 'react'
 
 interface MetricCardProps {
@@ -42,20 +32,22 @@ interface MetricCardProps {
 
 function MetricCard({ title, value, description, icon, loading, iconBgColor, iconColor }: MetricCardProps) {
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <Card className="shadow-lg bg-muted/30">
+      <CardHeader className=" pb-0">
         <CardTitle className="text-xl font-medium">{title}</CardTitle>
-        <div className={`p-2 rounded-full ${iconBgColor || 'bg-gray-100'}`}>
-          {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, { className: `h-8 w-8 ${iconColor || 'text-muted-foreground'}` }) : icon}
-        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
           <Skeleton className="h-8 w-16" />
         ) : (
-          <div className="text-2xl font-bold">{value}</div>
+          <div className="flex items-center gap-4 mb-2">
+            <div className={`p-2 rounded-full ${iconBgColor || 'bg-gray-100'}`}>
+              {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, { className: `h-10 w-10 ${iconColor || 'text-muted-foreground'}` }) : icon}
+            </div>
+            <div className="text-3xl font-bold">{value}</div>
+          </div>
         )}
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
   )
@@ -109,46 +101,6 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
    const [showCreateUserForm, setShowCreateUserForm] = useState(false)
 
   const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-    getValues,
-    trigger,
-    formState: { errors: formErrors },
-  } = useForm<CreateUserInput>({
-    resolver: zodResolver(createUserSchema),
-    defaultValues: {
-      role: 'user',
-    },
-  })
-
-  const utils = trpc.useUtils()
-
-  const createUserMutation = trpc.admin.createUser.useMutation({
-    onSuccess: () => {
-      toast.success('User created successfully!')
-      reset()
-      refetch.all()
-      // Invalidate and refetch user-related queries
-      utils.admin.getUsers.invalidate()
-      utils.admin.getCriticalDashboardData.invalidate()
-      // Delay closing the form to match AsyncButton's successDuration
-      setTimeout(() => {
-        setShowCreateUserForm(false)
-      }, 2000)
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to create user')
-    },
-  })
-
-  const onSubmit = async (data: CreateUserInput) => {
-    await createUserMutation.mutateAsync(data)
-  }
-
-  const {
     criticalData,
     secondaryData,
     detailedData,
@@ -193,171 +145,13 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
 
   if (showCreateUserForm) {
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Create New User</CardTitle>
-                <CardDescription>
-                  Add a new user to the system. They will receive an email invitation to set up their account.
-                </CardDescription>
-              </div>
-              <Button variant="destructive" onClick={() => setShowCreateUserForm(false)}>
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Row 1: First Name and Last Name */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* First Name Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    type="text"
-                    placeholder="John"
-                    {...register('firstName')}
-                  />
-                  {formErrors.firstName && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.firstName.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Last Name Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    type="text"
-                    placeholder="Doe"
-                    {...register('lastName')}
-                  />
-                  {formErrors.lastName && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.lastName.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Row 2: Date of Birth, Mobile Number, and Role */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Date of Birth Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                  <Input
-                    id="dateOfBirth"
-                    type="date"
-                    {...register('dateOfBirth')}
-                  />
-                  {formErrors.dateOfBirth && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.dateOfBirth.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Mobile Number Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="mobileNo">Mobile Number</Label>
-                  <Input
-                    id="mobileNo"
-                    type="tel"
-                    placeholder="+1234567890"
-                    {...register('mobileNo')}
-                  />
-                  {formErrors.mobileNo && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.mobileNo.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Role Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Select
-                    value={watch('role')}
-                    onValueChange={(value: 'admin' | 'user') => setValue('role', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {formErrors.role && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.role.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Row 3: Email and Password */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Email Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="user@example.com"
-                    {...register('email')}
-                  />
-                  {formErrors.email && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Password Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Minimum 8 characters"
-                    {...register('password')}
-                  />
-                  {formErrors.password && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formErrors.password.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <AsyncButton
-                onClick={async () => {
-                  const isValid = await trigger()
-                  if (!isValid) {
-                    throw new Error('Please check your input')
-                  }
-                  const data = getValues()
-                  await onSubmit(data)
-                }}
-                loadingText="Creating user..."
-                successText="User created!"
-                errorText="Failed to create user"
-                successDuration={2000}
-                className="w-full"
-              >
-                Create User
-              </AsyncButton>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+      <CreateUserForm
+        mode="inline"
+        onCancel={() => setShowCreateUserForm(false)}
+        onSuccess={() => {
+          refetch.all()
+        }}
+      />
     )
   }
 
@@ -462,47 +256,6 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
         </CardContent>
       </Card>
 
-      {/* Tier 2: Analytics Chart - Load after critical data */}
-      {criticalData && (
-        <SectionWrapper
-          isError={isError.secondary}
-          error={errors.secondary}
-          onRetry={refetch.secondary}
-          title="analytics chart"
-        >
-          {isLoading.secondary ? (
-            <ChartSkeleton />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Analytics Overview</CardTitle>
-                <CardDescription>User activity over the last 7 days</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={secondaryData?.analytics || []}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="metric_date"
-                      tickFormatter={(value) => new Date(value).toLocaleDateString()}
-                    />
-                    <YAxis />
-                    <Tooltip
-                      labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="metric_value"
-                      stroke="#8884d8"
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-        </SectionWrapper>
-      )}
 
       {/* Tier 3: Recent Activities - Load after secondary data */}
       {secondaryData && (
@@ -522,7 +275,10 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {detailedData?.recentActivities?.map((activity) => (
+                  {detailedData?.recentActivities
+                    ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    ?.slice(0, 10)
+                    ?.map((activity) => (
                     <div key={activity.id} className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50">
                       <Activity className="h-4 w-4 text-muted-foreground" />
                       <div className="flex-1">
