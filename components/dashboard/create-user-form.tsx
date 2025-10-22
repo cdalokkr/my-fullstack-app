@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createUserSchema, type CreateUserInput } from '@/lib/validations/auth'
@@ -25,6 +26,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { trpc } from '@/lib/trpc/client'
 import toast from 'react-hot-toast'
+import { X, UserPlus } from 'lucide-react'
 
 type FieldKey = 'firstName' | 'lastName' | 'email' | 'password' | 'dateOfBirth' | 'mobileNo' | 'role'
 
@@ -51,6 +53,7 @@ export function CreateUserForm({
   onSuccess,
 }: CreateUserFormProps) {
   const utils = trpc.useUtils()
+  const firstInputRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
@@ -66,6 +69,13 @@ export function CreateUserForm({
       role: 'user',
     },
   })
+
+  // Focus management: set focus to first input when modal opens
+  useEffect(() => {
+    if (mode === 'modal' && open && firstInputRef.current) {
+      setTimeout(() => firstInputRef.current?.focus(), 100)
+    }
+  }, [mode, open])
 
   const createUserMutation = trpc.admin.createUser.useMutation({
     onSuccess: () => {
@@ -98,6 +108,13 @@ export function CreateUserForm({
     onOpenChange?.(newOpen)
   }
 
+  // Keyboard navigation: handle Escape to close
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleOpenChange(false)
+    }
+  }
+
   const renderField = (field: FieldKey) => {
     switch (field) {
       case 'firstName':
@@ -109,9 +126,10 @@ export function CreateUserForm({
               type="text"
               placeholder="John"
               {...register('firstName')}
+              aria-describedby={errors.firstName ? "firstName-error" : undefined}
             />
             {errors.firstName && (
-              <p className="text-sm text-red-600 dark:text-red-400">
+              <p id="firstName-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
                 {errors.firstName.message}
               </p>
             )}
@@ -126,9 +144,10 @@ export function CreateUserForm({
               type="text"
               placeholder="Doe"
               {...register('lastName')}
+              aria-describedby={errors.lastName ? "lastName-error" : undefined}
             />
             {errors.lastName && (
-              <p className="text-sm text-red-600 dark:text-red-400">
+              <p id="lastName-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
                 {errors.lastName.message}
               </p>
             )}
@@ -143,9 +162,10 @@ export function CreateUserForm({
               type="email"
               placeholder="user@example.com"
               {...register('email')}
+              aria-describedby={errors.email ? "email-error" : undefined}
             />
             {errors.email && (
-              <p className="text-sm text-red-600 dark:text-red-400">
+              <p id="email-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
                 {errors.email.message}
               </p>
             )}
@@ -160,9 +180,10 @@ export function CreateUserForm({
               type="password"
               placeholder="Minimum 8 characters"
               {...register('password')}
+              aria-describedby={errors.password ? "password-error" : undefined}
             />
             {errors.password && (
-              <p className="text-sm text-red-600 dark:text-red-400">
+              <p id="password-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
                 {errors.password.message}
               </p>
             )}
@@ -176,9 +197,10 @@ export function CreateUserForm({
               id="dateOfBirth"
               type="date"
               {...register('dateOfBirth')}
+              aria-describedby={errors.dateOfBirth ? "dateOfBirth-error" : undefined}
             />
             {errors.dateOfBirth && (
-              <p className="text-sm text-red-600 dark:text-red-400">
+              <p id="dateOfBirth-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
                 {errors.dateOfBirth.message}
               </p>
             )}
@@ -193,9 +215,10 @@ export function CreateUserForm({
               type="tel"
               placeholder="+1234567890"
               {...register('mobileNo')}
+              aria-describedby={errors.mobileNo ? "mobileNo-error" : undefined}
             />
             {errors.mobileNo && (
-              <p className="text-sm text-red-600 dark:text-red-400">
+              <p id="mobileNo-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
                 {errors.mobileNo.message}
               </p>
             )}
@@ -209,7 +232,9 @@ export function CreateUserForm({
               value={watch('role')}
               onValueChange={(value: 'admin' | 'user') => setValue('role', value)}
             >
-              <SelectTrigger>
+              <SelectTrigger
+                aria-describedby={errors.role ? "role-error" : undefined}
+              >
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
@@ -218,7 +243,7 @@ export function CreateUserForm({
               </SelectContent>
             </Select>
             {errors.role && (
-              <p className="text-sm text-red-600 dark:text-red-400">
+              <p id="role-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
                 {errors.role.message}
               </p>
             )}
@@ -232,21 +257,30 @@ export function CreateUserForm({
   if (mode === 'modal') {
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent
+          className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto p-4 sm:p-6"
+          onKeyDown={handleKeyDown}
+          role="dialog"
+          aria-labelledby="create-user-modal-title"
+          aria-describedby="create-user-modal-description"
+        >
           <DialogHeader>
-            <DialogTitle>Create New User</DialogTitle>
-            <DialogDescription>
+            <DialogTitle id="create-user-modal-title">Create New User</DialogTitle>
+            <DialogDescription id="create-user-modal-description">
               Add a new user to the system. They will receive an email invitation to set up their account.
             </DialogDescription>
           </DialogHeader>
 
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
             {fieldOrder.map(renderField)}
 
-            <DialogFooter>
-              <div className="flex justify-end gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="col-span-1 sm:col-span-2 lg:col-span-3 max-w-full flex justify-start gap-4">
                 {onCancel && (
-                  <Button variant="outline" onClick={onCancel}>
+                  <Button variant="outline" onClick={onCancel} className="flex-1 group bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300">
+                    <span className="inline-flex items-center justify-center p-1 rounded-full bg-red-100 mr-2 transition-colors duration-300 group-hover:bg-red-200">
+                      <X className="h-4 w-4 text-red-600 transition-colors duration-300 group-hover:text-red-700" />
+                    </span>
                     Cancel
                   </Button>
                 )}
@@ -259,16 +293,19 @@ export function CreateUserForm({
                     const data = getValues()
                     await onSubmit(data)
                   }}
-                  loadingText="Creating user..."
-                  successText="User created!"
-                  errorText="Failed to create user"
+                  loadingText="Adding users..."
+                  successText="Users added!"
+                  errorText="Failed to add users"
                   successDuration={2000}
-                  className="flex-1"
+                  className="flex-1 group bg-primary text-primary-foreground hover:bg-primary/90"
                 >
-                  Create User
+                  <span className="inline-flex items-center justify-center p-1 rounded-full bg-primary/20 mr-2 transition-colors duration-300 group-hover:bg-primary/30">
+                    <UserPlus className="h-4 w-4 text-primary-foreground" />
+                  </span>
+                  Add Users
                 </AsyncButton>
               </div>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -277,7 +314,7 @@ export function CreateUserForm({
 
   // Inline mode
   return (
-    <div className="space-y-6 pt-6 pl-6 pr-6">
+    <div className="space-y-6 p-4 sm:p-6">
       <Card>
         <CardHeader>
           <CardTitle>Create New User</CardTitle>
@@ -288,47 +325,57 @@ export function CreateUserForm({
         <CardContent>
           <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
             {/* Row 1: First Name and Last Name */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {renderField('firstName')}
               {renderField('lastName')}
             </div>
 
             {/* Row 2: Date of Birth, Mobile Number, and Role */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {renderField('dateOfBirth')}
-              {renderField('mobileNo')}
-              {renderField('role')}
+            <div className="col-span-2">
+              <div className="grid grid-cols-3 gap-4">
+                {renderField('dateOfBirth')}
+                {renderField('mobileNo')}
+                {renderField('role')}
+              </div>
             </div>
 
             {/* Row 3: Email and Password */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {renderField('email')}
               {renderField('password')}
             </div>
 
-            <div className="flex gap-4">
-              {onCancel && (
-                <Button variant="outline" onClick={onCancel} className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300">
-                  Cancel
-                </Button>
-              )}
-              <AsyncButton
-                onClick={async () => {
-                  const isValid = await trigger()
-                  if (!isValid) {
-                    throw new Error('Please check your input')
-                  }
-                  const data = getValues()
-                  await onSubmit(data)
-                }}
-                loadingText="Creating user..."
-                successText="User created!"
-                errorText="Failed to create user"
-                successDuration={2000}
-                className={onCancel ? "flex-1" : "w-full"}
-              >
-                Create User
-              </AsyncButton>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="col-span-1 sm:col-span-2 lg:col-span-3 max-w-full flex justify-start gap-4">
+                {onCancel && (
+                  <Button variant="outline" onClick={onCancel} className="flex-1 group bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300">
+                    <span className="inline-flex items-center justify-center p-1 rounded-full bg-red-100 mr-2 transition-colors duration-300 group-hover:bg-red-200">
+                      <X className="h-4 w-4 text-red-600 transition-colors duration-300 group-hover:text-red-700" />
+                    </span>
+                    Cancel
+                  </Button>
+                )}
+                <AsyncButton
+                  onClick={async () => {
+                    const isValid = await trigger()
+                    if (!isValid) {
+                      throw new Error('Please check your input')
+                    }
+                    const data = getValues()
+                    await onSubmit(data)
+                  }}
+                  loadingText="Adding users..."
+                  successText="Users added!"
+                  errorText="Failed to add users"
+                  successDuration={2000}
+                  className={onCancel ? "flex-1 group bg-primary text-primary-foreground hover:bg-primary/90" : "w-full group bg-primary text-primary-foreground hover:bg-primary/90"}
+                >
+                  <span className="inline-flex items-center justify-center p-1 rounded-full bg-primary/20 mr-2 transition-colors duration-300 group-hover:bg-primary/30">
+                    <UserPlus className="h-4 w-4 text-primary-foreground" />
+                  </span>
+                  Add Users
+                </AsyncButton>
+              </div>
             </div>
           </form>
         </CardContent>

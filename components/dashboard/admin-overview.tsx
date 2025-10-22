@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -28,11 +29,18 @@ interface MetricCardProps {
   loading?: boolean
   iconBgColor?: string
   iconColor?: string
+  borderColor?: string
 }
 
-function MetricCard({ title, value, description, icon, loading, iconBgColor, iconColor }: MetricCardProps) {
-  return (
-    <Card className="shadow-lg bg-muted/30">
+function MetricCard({ title, value, description, icon, loading, iconBgColor, iconColor, borderColor }: MetricCardProps) {
+  const iconBgHover = iconBgColor?.replace('-100', '-200') || 'bg-gray-200'
+  const iconColorHover = iconColor?.replace('-600', '-700') || 'text-muted-foreground'
+  const borderHoverColor = borderColor?.replace('-200', '-300') || 'border-transparent'
+  
+    const [isHovered, setIsHovered] = useState(false)
+  
+    return (
+    <Card className={`group shadow-lg bg-muted/30 transition-all duration-300 ease-in-out border-2 ${borderColor || 'border-transparent'} group-hover:${borderHoverColor}`} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       <CardHeader className=" pb-0">
         <CardTitle className="text-xl font-medium">{title}</CardTitle>
       </CardHeader>
@@ -41,8 +49,8 @@ function MetricCard({ title, value, description, icon, loading, iconBgColor, ico
           <Skeleton className="h-8 w-16" />
         ) : (
           <div className="flex items-center gap-4 mb-2">
-            <div className={`p-2 rounded-full ${iconBgColor || 'bg-gray-100'}`}>
-              {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, { className: `h-10 w-10 ${iconColor || 'text-muted-foreground'}` }) : icon}
+            <div className={`p-2 rounded-full ${iconBgColor || 'bg-gray-100'} transition-all duration-300 group-hover:${iconBgHover}`}>
+              {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, { className: `h-10 w-10 ${isHovered ? iconColorHover : (iconColor || 'text-muted-foreground')} transition-colors duration-300` }) : icon}
             </div>
             <div className="text-3xl font-bold">{value}</div>
           </div>
@@ -184,15 +192,18 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
         title="critical metrics"
       >
         <div data-testid="critical-metrics" className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-          <MetricCard
-            title="Total Users"
-            value={criticalData?.totalUsers || 0}
-            description="Registered users"
-            icon={<Users className="h-4 w-4 text-muted-foreground" />}
-            loading={isLoading.critical}
-            iconBgColor="bg-blue-100"
-            iconColor="text-blue-600"
-          />
+          <Link href="/admin/users/all" className="block">
+            <MetricCard
+              title="Total Users"
+              value={criticalData?.totalUsers || 0}
+              description="Registered users"
+              icon={<Users className="h-4 w-4 text-muted-foreground" />}
+              loading={isLoading.critical}
+              iconBgColor="bg-blue-100"
+              iconColor="text-blue-600"
+              borderColor="border-blue-200"
+            />
+          </Link>
           <MetricCard
             title="Active Users"
             value={activeUsers}
@@ -201,6 +212,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
             loading={isLoading.critical}
             iconBgColor="bg-green-100"
             iconColor="text-green-600"
+            borderColor="border-green-200"
           />
           <MetricCard
             title="Total Activities"
@@ -210,6 +222,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
             loading={isLoading.secondary}
             iconBgColor="bg-purple-100"
             iconColor="text-purple-600"
+            borderColor="border-purple-200"
           />
           <MetricCard
             title="Today's Activities"
@@ -219,13 +232,14 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
             loading={isLoading.secondary}
             iconBgColor="bg-orange-100"
             iconColor="text-orange-600"
+            borderColor="border-orange-200"
           />
         </div>
         
       </SectionWrapper>
 
       {/* Quick Actions - Always visible */}
-      <Card>
+      <Card className="shadow-lg bg-muted/30">
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
           <CardDescription>Common administrative tasks</CardDescription>
@@ -234,24 +248,38 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              size="sm"
+              className="group bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 "
               onClick={() => setShowCreateUserForm(true)}
             >
-              <UserPlus className="h-4 w-4 mr-2" />
+              <span className="inline-flex items-center justify-center p-1 rounded-full bg-blue-100 mr-2 transition-colors duration-300 group-hover:bg-blue-200">
+                <UserPlus className="h-4 w-4 text-blue-600 transition-colors duration-300 group-hover:text-blue-700" />
+              </span>
               Add User
             </Button>
-            <Button variant="outline" size="sm">
-              <Users className="h-4 w-4 mr-2" />
-              Manage Users
-            </Button>
-            <Button variant="outline" size="sm">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              View Reports
-            </Button>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              System Settings
-            </Button>
+            <Link href="/admin/users/all">
+              <Button variant="outline" className="group bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 ">
+                <span className="inline-flex items-center justify-center p-1 rounded-full bg-blue-100 mr-2 transition-colors duration-300 group-hover:bg-blue-200">
+                  <Users className="h-4 w-4 text-blue-600 transition-colors duration-300 group-hover:text-blue-700" />
+                </span>
+                Manage Users
+              </Button>
+            </Link>
+            <Link href="/admin">
+              <Button variant="outline" className="group bg-orange-50 hover:bg-orange-100 active:bg-orange-200 text-orange-700 border-orange-200 hover:border-orange-300 active:border-orange-400 ">
+                <span className="inline-flex items-center justify-center p-1 rounded-full bg-orange-100 mr-2 transition-colors duration-300 group-hover:bg-orange-200">
+                  <BarChart3 className="h-4 w-4 text-orange-600 transition-colors duration-300 group-hover:text-orange-700" />
+                </span>
+                View Reports
+              </Button>
+            </Link>
+            <Link href="/admin/settings">
+              <Button variant="outline" className="group bg-purple-50 hover:bg-purple-100 active:bg-purple-200 text-purple-700 border-purple-200 hover:border-purple-300 active:border-purple-400 ">
+                <span className="inline-flex items-center justify-center p-1 rounded-full bg-purple-100 mr-2 transition-colors duration-300 group-hover:bg-purple-200">
+                  <Settings className="h-4 w-4 text-purple-600 transition-colors duration-300 group-hover:text-purple-700" />
+                </span>
+                System Settings
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>

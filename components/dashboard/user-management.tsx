@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Edit, Trash2, Plus, X, Save, AlertTriangle } from 'lucide-react'
+import { Edit, Trash2, UserPlus, X, Save, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { AsyncButton } from '@/components/ui/async-button'
@@ -138,8 +138,10 @@ export default function UserManagement() {
     <div className="space-y-4 pt-6 pl-6 pr-6 pb-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">User Management</h2>
-        <Button onClick={() => setShowCreateUserForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setShowCreateUserForm(true)}>
+          <span className="inline-flex items-center justify-center w-4 h-4 mr-2">
+            <UserPlus className="h-4 w-4 text-primary-foreground" />
+          </span>
           Create User
         </Button>
       </div>
