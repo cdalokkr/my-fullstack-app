@@ -17,7 +17,7 @@ import { trpc } from '@/lib/trpc/client'
 
 export function LoginForm() {
   const router = useRouter()
-  const { client: trpcClient } = trpc.useContext()
+  const utils = trpc.useUtils()
   const [isLoading, setIsLoading] = useState(false)
 
   const {
@@ -102,12 +102,55 @@ export function LoginForm() {
           setIsLoading(state === 'loading' || state === 'success');
           if (state === 'success') {
             (async () => {
-              const profile = await trpcClient.profile.get.query();
-              await new Promise(resolve => setTimeout(resolve, 4000));
-              router.push(profile.role === 'admin' ? '/admin' : '/user');
+              try {
+                // Get profile from login response instead of making duplicate fetch
+                const profile = loginMutation.data?.profile;
+                if (!profile) return;
+                
+                // Store the fetched user profile in localStorage immediately
+                localStorage.setItem('userProfile', JSON.stringify(profile));
+                
+                // Add a small delay to ensure authentication context is updated
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Preload admin data in background (non-blocking) if user is admin
+                if (profile.role === 'admin') {
+                  try {
+                    // Use tRPC utils for prefetching (correct v11 pattern)
+                    await utils.admin.getStats.prefetch();
+                    await utils.admin.getAnalytics.prefetch({ days: 7 });
+                    await utils.admin.getRecentActivities.prefetch({ limit: 5 });
+                  } catch (error) {
+                    console.error('Error prefetching admin data:', error);
+                    // Continue with redirect even if prefetch fails
+                  }
+                }
+                
+                // Preload avatar image if available (non-blocking)
+                if (profile.avatar_url) {
+                  try {
+                    const img = new Image();
+                    img.src = profile.avatar_url;
+                  } catch (error) {
+                    console.error('Error preloading avatar:', error);
+                  }
+                }
+                
+                // Redirect after successful authentication and prefetching
+                router.push(profile.role === 'admin' ? '/admin' : '/user');
+              } catch (error) {
+                console.error('Error during login success handling:', error);
+                // Still redirect even if there's an error
+                const profile = loginMutation.data?.profile;
+                if (profile) {
+                  router.push(profile.role === 'admin' ? '/admin' : '/user');
+                }
+              }
             })();
           }
         }}
+        successDuration={4000}
+        autoReset={false}
         className="w-full"
         size="lg"
       >

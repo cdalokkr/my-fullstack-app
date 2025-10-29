@@ -9,7 +9,7 @@ export interface NavItem {
 export const adminNavItems: NavItem[] = [
   {
     title: "Dashboard",
-    href: "/admin/dashboard",
+    href: "/admin",
     icon: "Home",
   },
   {
@@ -28,11 +28,6 @@ export const adminNavItems: NavItem[] = [
         icon: "User",
       },
     ],
-  },
-  {
-    title: "Analytics",
-    href: "/admin/analytics",
-    icon: "BarChart2",
   },
   {
     title: "Settings",

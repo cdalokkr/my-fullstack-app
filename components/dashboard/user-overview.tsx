@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { trpc } from '@/lib/trpc/client'
 import { User, Activity, Bell, Edit, Settings, Eye } from 'lucide-react'
 import { Profile, Activity as ActivityType } from '@/types'
+import { useEffect } from 'react'
 
 interface ProfileCardProps {
   profile: Profile | null
@@ -122,16 +123,19 @@ function NotificationsCard({ count, loading }: NotificationsCardProps) {
   )
 }
 
-export function UserOverview() {
-  const { data: profile, isLoading: profileLoading } = trpc.profile.get.useQuery()
+export function UserOverview({ profile, onLoadingChange }: { profile?: Profile | null | undefined; onLoadingChange: (loading: boolean) => void }) {
   const { data: activities, isLoading: activitiesLoading } = trpc.profile.getActivities.useQuery({ limit: 5 })
   const { data: unreadCount, isLoading: notificationsLoading } = trpc.notification.getUnreadCount.useQuery()
+
+  useEffect(() => {
+    onLoadingChange(activitiesLoading || notificationsLoading)
+  }, [activitiesLoading, notificationsLoading, onLoadingChange])
 
   return (
     <div className="space-y-6">
       {/* Profile and Notifications */}
       <div className="grid gap-4 md:grid-cols-2">
-        <ProfileCard profile={profile || null} loading={profileLoading} />
+        <ProfileCard profile={profile || null} loading={false} />
         <NotificationsCard count={unreadCount || 0} loading={notificationsLoading} />
       </div>
 

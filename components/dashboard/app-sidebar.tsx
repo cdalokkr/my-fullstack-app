@@ -3,11 +3,15 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import dynamic from 'next/dynamic'
 import { ChevronRight } from "lucide-react"
 import { UserRole, Profile } from "@/types"
 import { Icons } from "@/components/icons"
 import { OrgSwitcher } from "@/components/org-switcher"
-import { UserProfilePopover } from "./user-profile-popover"
+const UserProfilePopover = dynamic(() => import("./user-profile-popover").then(mod => ({ default: mod.UserProfilePopover })), {
+  ssr: false,
+  loading: () => <div className="flex items-center gap-2 rounded-md text-left w-full p-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"><div className="h-8 w-8 rounded-full bg-muted animate-pulse"></div></div>
+});
 import { adminNavItems, userNavItems, type NavItem } from "./nav-items"
 import {
   Sidebar,
@@ -42,20 +46,17 @@ interface AppSidebarProps {
   user: Profile | null
 }
 
-function NavItemComponent({ item, pathname }: { item: NavItem; pathname: string }) {
+const NavItemComponent = React.memo(({ item, pathname }: { item: NavItem; pathname: string }) => {
   const Icon = Icons[item.icon]
   const isActive = pathname === item.href
   const hasChildren = item.children && item.children.length > 0
-  const [open, setOpen] = React.useState(isActive)
-
-  console.log(`NavItem ${item.title}: initial open=${open}, isActive=${isActive}, pathname=${pathname}`)
+  const [open, setOpen] = React.useState(false)
 
   React.useEffect(() => {
-    console.log(`NavItem ${item.title}: pathname changed to ${pathname}, current open=${open}`)
-  }, [pathname, item.title, open])
+    setOpen(isActive)
+  }, [isActive])
 
   const handleOpenChange = (newOpen: boolean) => {
-    console.log(`NavItem ${item.title}: open changing from ${open} to ${newOpen}`)
     setOpen(newOpen)
   }
 
@@ -108,9 +109,11 @@ function NavItemComponent({ item, pathname }: { item: NavItem; pathname: string 
       </SidebarMenuButton>
     </SidebarMenuItem>
   )
-}
+})
 
-export function AppSidebar({ role, tenants, defaultTenant, onTenantSwitch, user }: AppSidebarProps) {
+NavItemComponent.displayName = 'NavItemComponent'
+
+export const AppSidebar = React.memo(({ role, tenants, defaultTenant, onTenantSwitch, user }: AppSidebarProps) => {
   const pathname = usePathname()
   const navItems = role === "admin" ? adminNavItems : userNavItems
 
@@ -139,4 +142,6 @@ export function AppSidebar({ role, tenants, defaultTenant, onTenantSwitch, user 
       </SidebarFooter>
     </Sidebar>
   )
-}
+})
+
+AppSidebar.displayName = 'AppSidebar'

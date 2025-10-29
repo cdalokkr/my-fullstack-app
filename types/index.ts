@@ -46,3 +46,86 @@ export interface Notification {
   is_read: boolean
   created_at: string
 }
+
+export interface AdminStats {
+  totalUsers: number
+  totalActivities: number
+  todayActivities: number
+}
+
+export interface DashboardData {
+  stats: AdminStats
+  analytics: AnalyticsMetric[]
+  recentActivities: (Activity & { profiles?: { email: string; full_name: string } })[]
+  metadata: {
+    fetchedAt: string
+    version: string
+    cacheExpiry: number
+  }
+}
+
+// Analytics-specific types
+export interface AnalyticsKPIs {
+  userEngagementRate: number
+  averageSessionDuration: number
+  conversionRate: number
+  bounceRate: number
+  pageViews: number
+  uniqueVisitors: number
+  newUsers: number
+  returningUsers: number
+  topPages: TopPage[]
+  cohortAnalysis: CohortAnalysis[]
+  funnelStages: FunnelStage[]
+}
+
+export interface TopPage {
+  page: string
+  views: number
+  uniqueViews: number
+  avgTimeOnPage: number
+  bounceRate: number
+}
+
+export interface CohortAnalysis {
+  cohort: string
+  period: string
+  users: number
+  retention: number
+  revenue?: number
+}
+
+export interface FunnelStage {
+  stage: string
+  users: number
+  conversionRate: number
+  dropOffRate: number
+}
+
+export interface AnalyticsFilters {
+  dateRange: {
+    start: Date
+    end: Date
+  }
+  userSegments: string[]
+  metricTypes: string[]
+}
+
+export interface AnalyticsDrilldownData {
+  metric: string
+  data: Array<{
+    date: string
+    value: number
+    breakdown?: Record<string, number>
+  }>
+}
+
+export interface AnalyticsExportOptions {
+  format: 'csv' | 'json' | 'pdf'
+  dateRange: {
+    start: Date
+    end: Date
+  }
+  metrics: string[]
+  includeCharts: boolean
+}
