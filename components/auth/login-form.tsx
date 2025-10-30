@@ -11,7 +11,7 @@ import { loginSchema, type LoginInput } from '@/lib/validations/auth'
 import { LoginButton } from '@/components/ui/async-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FiLock, FiMail } from 'react-icons/fi'
+import { Lock, Mail } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { trpc } from '@/lib/trpc/client'
 
@@ -48,7 +48,7 @@ export function LoginForm() {
           Email Address
         </Label>
         <div className="relative">
-          <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <Input
             id="email"
             type="email"
@@ -71,7 +71,7 @@ export function LoginForm() {
           Password
         </Label>
         <div className="relative">
-          <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <Input
             id="password"
             type="password"

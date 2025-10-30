@@ -3,7 +3,7 @@
 // ============================================
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { FiLogIn, FiUser } from 'react-icons/fi'
+import { LogIn, User } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 export const metadata = {
@@ -29,7 +29,7 @@ export default async function HomePage() {
             <ThemeToggle />
             <Link href="/login">
               <Button className="gap-2">
-                <FiLogIn /> Login
+                <LogIn /> Login
               </Button>
             </Link>
           </div>
@@ -50,7 +50,7 @@ export default async function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Link href="/login">
               <Button size="lg" className="gap-2 w-full sm:w-auto">
-                <FiLogIn /> Get Started
+                <LogIn /> Get Started
               </Button>
             </Link>
           </div>
@@ -59,7 +59,7 @@ export default async function HomePage() {
           <div className="grid md:grid-cols-3 gap-8 mt-20">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
               <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <FiUser className="text-2xl text-blue-600 dark:text-blue-400" />
+                <User className="text-2xl text-blue-600 dark:text-blue-400" />
               </div>
               <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
                 Role-Based Access

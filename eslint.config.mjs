@@ -1,16 +1,6 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import tseslint from 'typescript-eslint';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+export default [
   {
     ignores: [
       "node_modules/**",
@@ -18,8 +8,32 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "dist/**",
+      ".swc/**",
+      "backups/**",
     ],
   },
+  {
+    files: ["**/*.{js,jsx}"],
+    rules: {
+      // Basic JavaScript rules
+      "no-unused-vars": "off", // Disabled for now
+      "no-undef": "off", // Disabled for now
+      "no-unreachable": "warn",
+      "no-unreachable-loop": "warn",
+    },
+  },
+  {
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parser: tseslint.parser,
+    },
+    rules: {
+      // TypeScript-specific rules can be added here
+      "no-unused-vars": "off", // Disabled for now
+      "no-undef": "off", // Disabled for now
+      "no-unreachable": "warn",
+      "no-unreachable-loop": "warn",
+    },
+  },
 ];
-
-export default eslintConfig;

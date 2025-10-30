@@ -67,10 +67,6 @@ const nextConfig: NextConfig = {
   // Enable React strict mode for better security
   reactStrictMode: true,
 
-  // Enhanced compression and security
-  compress: true,
-  poweredByHeader: false,
-
   // Enable experimental features for better performance
   experimental: {
     optimizePackageImports: [

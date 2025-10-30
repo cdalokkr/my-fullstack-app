@@ -5,7 +5,7 @@
 
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
-import { FiMoon, FiSun } from 'react-icons/fi'
+import { Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function ThemeToggle() {
@@ -27,9 +27,9 @@ export function ThemeToggle() {
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
     >
       {theme === 'dark' ? (
-        <FiSun className="h-5 w-5" />
+        <Sun className="h-5 w-5" />
       ) : (
-        <FiMoon className="h-5 w-5" />
+        <Moon className="h-5 w-5" />
       )}
       <span className="sr-only">Toggle theme</span>
     </Button>
