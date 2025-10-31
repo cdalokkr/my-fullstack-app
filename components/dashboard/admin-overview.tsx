@@ -105,7 +105,7 @@ function SectionWrapper({
   )
 }
 
-export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: boolean) => void }) {
+export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) {
    const [showCreateUserForm, setShowCreateUserForm] = useState(false)
 
   const {
@@ -122,7 +122,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
   const isAnyLoading = isLoading.critical || isLoading.secondary || isLoading.detailed
 
   useEffect(() => {
-    onLoadingChange(isAnyLoading)
+    onLoadingChange?.(isAnyLoading)
   }, [isAnyLoading, onLoadingChange])
 
   // Calculate active users from analytics data when available
@@ -164,7 +164,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 gesture-friendly">
       {/* Header with refresh button */}
       <div className="flex justify-between items-center">
         <div>
@@ -191,7 +191,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
         onRetry={refetch.critical}
         title="critical metrics"
       >
-        <div data-testid="critical-metrics" className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+        <div data-testid="critical-metrics" className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Link href="/admin/users/all" className="block">
             <MetricCard
               title="Total Users"
@@ -248,6 +248,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
+              size="touch"
               className="group bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 "
               onClick={() => setShowCreateUserForm(true)}
             >
@@ -257,7 +258,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
               Add User
             </Button>
             <Link href="/admin/users/all">
-              <Button variant="outline" className="group bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 ">
+              <Button variant="outline" size="touch" className="group bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 ">
                 <span className="inline-flex items-center justify-center p-1 rounded-full bg-blue-100 mr-2 transition-colors duration-300 group-hover:bg-blue-200">
                   <Users className="h-4 w-4 text-blue-600 transition-colors duration-300 group-hover:text-blue-700" />
                 </span>
@@ -265,7 +266,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
               </Button>
             </Link>
             <Link href="/admin">
-              <Button variant="outline" className="group bg-orange-50 hover:bg-orange-100 active:bg-orange-200 text-orange-700 border-orange-200 hover:border-orange-300 active:border-orange-400 ">
+              <Button variant="outline" size="touch" className="group bg-orange-50 hover:bg-orange-100 active:bg-orange-200 text-orange-700 border-orange-200 hover:border-orange-300 active:border-orange-400 ">
                 <span className="inline-flex items-center justify-center p-1 rounded-full bg-orange-100 mr-2 transition-colors duration-300 group-hover:bg-orange-200">
                   <BarChart3 className="h-4 w-4 text-orange-600 transition-colors duration-300 group-hover:text-orange-700" />
                 </span>
@@ -273,7 +274,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange: (loading: 
               </Button>
             </Link>
             <Link href="/admin/settings">
-              <Button variant="outline" className="group bg-purple-50 hover:bg-purple-100 active:bg-purple-200 text-purple-700 border-purple-200 hover:border-purple-300 active:border-purple-400 ">
+              <Button variant="outline" size="touch" className="group bg-purple-50 hover:bg-purple-100 active:bg-purple-200 text-purple-700 border-purple-200 hover:border-purple-300 active:border-purple-400 ">
                 <span className="inline-flex items-center justify-center p-1 rounded-full bg-purple-100 mr-2 transition-colors duration-300 group-hover:bg-purple-200">
                   <Settings className="h-4 w-4 text-purple-600 transition-colors duration-300 group-hover:text-purple-700" />
                 </span>

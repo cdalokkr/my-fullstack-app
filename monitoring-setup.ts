@@ -293,7 +293,7 @@ export class HealthChecker {
       // Add your database health check logic here
       checks.database = { status: 'healthy', message: 'Database connection OK' };
     } catch (error) {
-      checks.database = { status: 'unhealthy', message: error.message };
+      checks.database = { status: 'unhealthy', message: error instanceof Error ? error.message : 'Database connection failed' };
       overallStatus = 'unhealthy';
     }
 
@@ -302,7 +302,7 @@ export class HealthChecker {
       // Add your cache health check logic here
       checks.cache = { status: 'healthy', message: 'Cache system OK' };
     } catch (error) {
-      checks.cache = { status: 'degraded', message: error.message };
+      checks.cache = { status: 'degraded', message: error instanceof Error ? error.message : 'Cache check failed' };
       if (overallStatus === 'healthy') overallStatus = 'degraded';
     }
 
@@ -311,7 +311,7 @@ export class HealthChecker {
       // Add your external services health check logic here
       checks.external_services = { status: 'healthy', message: 'External services OK' };
     } catch (error) {
-      checks.external_services = { status: 'degraded', message: error.message };
+      checks.external_services = { status: 'degraded', message: error instanceof Error ? error.message : 'External services check failed' };
       if (overallStatus === 'healthy') overallStatus = 'degraded';
     }
 

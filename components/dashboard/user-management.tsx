@@ -48,24 +48,24 @@ export default function UserManagement() {
 
   const utils = trpc.useUtils()
 
-  const { data: usersData, isLoading, error, refetch } = trpc.admin.getUsers.useQuery({
+  const { data: usersData, isLoading, error, refetch } = trpc.admin.users.getUsers.useQuery({
     page: 1,
     limit: 50, // Adjust as needed
   })
 
-  const updateRoleMutation = trpc.admin.updateUserRole.useMutation({
+  const updateRoleMutation = trpc.admin.users.updateUserRole.useMutation({
     onError: (error) => {
       toast.error(error.message || 'Failed to update user role')
     },
   })
 
-  const updateProfileMutation = trpc.admin.updateUserProfile.useMutation({
+  const updateProfileMutation = trpc.admin.users.updateUserProfile.useMutation({
     onError: (error) => {
       toast.error(error.message || 'Failed to update user profile')
     },
   })
 
-  const deleteUserMutation = trpc.admin.deleteUser.useMutation({
+  const deleteUserMutation = trpc.admin.users.deleteUser.useMutation({
     onSuccess: () => {
       refetch()
       setDeleteUserId(null)
@@ -127,8 +127,8 @@ export default function UserManagement() {
         onCancel={() => setShowCreateUserForm(false)}
         onSuccess={() => {
           refetch()
-          utils.admin.getUsers.invalidate()
-          utils.admin.getCriticalDashboardData.invalidate()
+          utils.admin.users.getUsers.invalidate()
+          utils.admin.dashboard.getCriticalDashboardData.invalidate()
         }}
       />
     )
@@ -138,9 +138,9 @@ export default function UserManagement() {
     <div className="space-y-4 pt-6 pl-6 pr-6 pb-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">User Management</h2>
-        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setShowCreateUserForm(true)}>
+        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setShowCreateUserForm(true)} aria-label="Create new user">
           <span className="inline-flex items-center justify-center w-4 h-4 mr-2">
-            <UserPlus className="h-4 w-4 text-primary-foreground" />
+            <UserPlus className="h-4 w-4 text-primary-foreground" aria-hidden="true" />
           </span>
           Create User
         </Button>
@@ -152,7 +152,7 @@ export default function UserManagement() {
           <CardDescription className='m-0 p-0 text-muted-foreground text-center text-sm'>Double-click a row or click the edit icon to edit a record inline, then save or cancel changes.</CardDescription>
         </CardHeader>
         <CardContent className="px-6 py-0 pt-0">
-          <Table className="border border-border rounded-lg shadow-sm">
+          <Table className="border border-border rounded-lg shadow-sm" aria-label="User management table">
             <TableHeader className="bg-blue-500/70 [&_tr]:border-0 hover:[&_tr]:bg-blue-500/10">
               <TableRow>
                 <TableHead>Email</TableHead>
@@ -252,7 +252,7 @@ export default function UserManagement() {
                                 variant="outline"
                                 className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
                                 onClick={handleUpdateUser}
-
+                                aria-label="Save user changes"
                                 loadingText="Saving..."
                                 successText="Saved!!"
                                 errorText="Save failed. Please try again."
@@ -260,15 +260,15 @@ export default function UserManagement() {
                                 onStateChange={(state) => {
                                   if (state === 'success') {
                                     refetch()
-                                    utils.admin.getUsers.invalidate()
-                                    utils.admin.getCriticalDashboardData.invalidate()
+                                    utils.admin.users.getUsers.invalidate()
+                                    utils.admin.dashboard.getCriticalDashboardData.invalidate()
                                     setTimeout(() => {
                                       setEditingUserId(null)
                                     }, 2000)
                                   }
                                 }}
                               >
-                                <Save className="h-4 w-4 mr-2" />
+                                <Save className="h-4 w-4 mr-2" aria-hidden="true" />
                                 Save
                               </AsyncButton>
                               <Button
@@ -276,8 +276,9 @@ export default function UserManagement() {
                                 variant="outline"
                                 className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300"
                                 onClick={handleCancelEdit}
+                                aria-label="Cancel editing user"
                               >
-                                <X className="h-4 w-4 mr-2" />
+                                <X className="h-4 w-4 mr-2" aria-hidden="true" />
                                 Cancel
                               </Button>
                             </>
@@ -288,8 +289,9 @@ export default function UserManagement() {
                                 size="sm"
                                 className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
                                 onClick={() => handleEditUser(user)}
+                                aria-label={`Edit user ${user.email}`}
                               >
-                                <Edit className="h-4 w-4 mr-2" />
+                                <Edit className="h-4 w-4 mr-2" aria-hidden="true" />
                                 Edit
                               </Button>
                               <AlertDialog>
@@ -299,8 +301,9 @@ export default function UserManagement() {
                                     size="sm"
                                     className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300"
                                     onClick={() => setDeleteUserId(user.id)}
+                                    aria-label={`Delete user ${user.email}`}
                                   >
-                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    <Trash2 className="h-4 w-4 mr-2" aria-hidden="true" />
                                     Delete
                                   </Button>
                                 </AlertDialogTrigger>

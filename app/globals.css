@@ -155,4 +155,55 @@
 ::view-transition-new(root) {
   /* Apply the reveal animation */
   animation: reveal 0.4s ease-in-out forwards;
+/* Mobile optimization styles */
+@layer utilities {
+  /* Touch-friendly scroll behavior */
+  .scroll-smooth-touch {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Improved touch targets for mobile */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better gesture handling */
+  .gesture-friendly {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Mobile-first responsive utilities */
+  .mobile-optimized {
+    /* Prevent zoom on input focus */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    textarea,
+    select {
+      font-size: 16px;
+    }
+  }
+}
+
+/* Mobile-specific media queries */
+@media (max-width: 640px) {
+  /* Improve scroll performance on mobile */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better button spacing on mobile */
+  .mobile-button-spacing {
+    margin: 0.5rem;
+  }
+
+  /* Optimize grid layouts for small screens */
+  .mobile-grid-optimized {
+    gap: 0.75rem;
+  }
+}
 }

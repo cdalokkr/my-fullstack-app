@@ -3,6 +3,8 @@
 // ============================================
 // This file manages feature flags for gradual rollout and A/B testing
 
+import React from 'react';
+
 export interface FeatureFlag {
   name: string;
   description: string;
@@ -243,7 +245,9 @@ export class FeatureFlagsManager {
       ...updates,
       metadata: {
         ...flag.metadata,
-        updatedAt: new Date().toISOString()
+        createdAt: flag.metadata?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        owner: flag.metadata?.owner || 'System'
       }
     });
 
@@ -276,11 +280,11 @@ export const withFeatureFlag = <P extends object>(
 ) => {
   return (props: P) => {
     if (featureFlags.isEnabled(flagName)) {
-      return <Component {...props} />;
+      return React.createElement(Component, props);
     }
 
     if (FallbackComponent) {
-      return <FallbackComponent {...props} />;
+      return React.createElement(FallbackComponent, props);
     }
 
     return null;

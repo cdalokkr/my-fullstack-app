@@ -132,9 +132,9 @@ export function UserOverview({ profile, onLoadingChange }: { profile?: Profile |
   }, [activitiesLoading, notificationsLoading, onLoadingChange])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 gesture-friendly">
       {/* Profile and Notifications */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <ProfileCard profile={profile || null} loading={false} />
         <NotificationsCard count={unreadCount || 0} loading={notificationsLoading} />
       </div>
@@ -150,19 +150,19 @@ export function UserOverview({ profile, onLoadingChange }: { profile?: Profile |
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="touch">
               <Edit className="h-4 w-4 mr-2" />
               Edit Profile
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="touch">
               <Bell className="h-4 w-4 mr-2" />
               View Notifications
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="touch">
               <Eye className="h-4 w-4 mr-2" />
               Activity History
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="touch">
               <Settings className="h-4 w-4 mr-2" />
               Account Settings
             </Button>

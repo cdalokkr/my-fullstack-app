@@ -18,7 +18,7 @@ export function useAdminDashboardDataCombined(
   activitiesLimit: number = 10
 ): AdminDashboardDataState {
   // Use the new combined endpoint
-  const dashboardQuery = trpc.admin.getDashboardData.useQuery(
+  const dashboardQuery = trpc.admin.dashboard.getDashboardData.useQuery(
     { 
       analyticsDays, 
       activitiesLimit 

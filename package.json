@@ -48,8 +48,10 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@axe-core/cli": "^4.11.0",
     "@eslint/eslintrc": "^3",
     "@eslint/js": "^9.38.0",
+    "@next/bundle-analyzer": "^16.0.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

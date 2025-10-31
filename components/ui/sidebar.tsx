@@ -276,9 +276,10 @@ function SidebarTrigger({
         onClick?.(event)
         toggleSidebar()
       }}
+      aria-label="Toggle sidebar"
       {...props}
     >
-      <PanelLeftIcon />
+      <PanelLeftIcon aria-hidden="true" />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
@@ -304,6 +305,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
         "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
         className
       )}
+      aria-hidden="true"
       {...props}
     />
   )

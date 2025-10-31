@@ -117,9 +117,9 @@ export function LoginForm() {
                 if (profile.role === 'admin') {
                   try {
                     // Use tRPC utils for prefetching (correct v11 pattern)
-                    await utils.admin.getStats.prefetch();
-                    await utils.admin.getAnalytics.prefetch({ days: 7 });
-                    await utils.admin.getRecentActivities.prefetch({ limit: 5 });
+                    await utils.admin.dashboard.getStats.prefetch();
+                    await utils.admin.analytics.getAnalytics.prefetch({ days: 7 });
+                    await utils.admin.dashboard.getRecentActivities.prefetch({ limit: 5 });
                   } catch (error) {
                     console.error('Error prefetching admin data:', error);
                     // Continue with redirect even if prefetch fails

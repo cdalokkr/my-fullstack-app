@@ -77,7 +77,7 @@ export function CreateUserForm({
     }
   }, [mode, open])
 
-  const createUserMutation = trpc.admin.createUser.useMutation({
+  const createUserMutation = trpc.admin.users.createUser.useMutation({
     onSuccess: () => {
       toast.success('User created successfully!')
       reset()
@@ -89,8 +89,8 @@ export function CreateUserForm({
           onCancel?.()
         }, 2000)
       }
-      utils.admin.getUsers.invalidate()
-      utils.admin.getCriticalDashboardData.invalidate()
+      utils.admin.users.getUsers.invalidate()
+      utils.admin.dashboard.getCriticalDashboardData.invalidate()
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to create user')

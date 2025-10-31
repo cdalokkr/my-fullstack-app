@@ -321,13 +321,13 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
   }, [])
 
   // Use React Query with cache-aware fetching
-  const criticalQuery = trpc.admin.getCriticalDashboardData.useQuery(undefined, {
+  const criticalQuery = trpc.admin.dashboard.getCriticalDashboardData.useQuery(undefined, {
     staleTime: 15 * 1000, // 15 seconds
     refetchOnWindowFocus: false,
     queryFn: fetchCriticalData,
   })
 
-  const secondaryQuery = trpc.admin.getSecondaryDashboardData.useQuery(
+  const secondaryQuery = trpc.admin.dashboard.getSecondaryDashboardData.useQuery(
     { analyticsDays: 7 },
     {
       enabled: !!criticalQuery.data,
@@ -337,7 +337,7 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
     }
   )
 
-  const detailedQuery = trpc.admin.getDetailedDashboardData.useQuery(undefined, {
+  const detailedQuery = trpc.admin.dashboard.getDetailedDashboardData.useQuery(undefined, {
     enabled: !!secondaryQuery.data,
     staleTime: 60 * 1000, // 60 seconds
     refetchOnWindowFocus: false,

@@ -13,6 +13,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
       <table
         data-slot="table"
         className={cn("w-full caption-bottom text-sm", className)}
+        role="table"
         {...props}
       />
     </div>
@@ -24,6 +25,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
     <thead
       data-slot="table-header"
       className={cn("[&_tr]:border-b", className)}
+      role="rowgroup"
       {...props}
     />
   )
@@ -34,6 +36,7 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
     <tbody
       data-slot="table-body"
       className={cn("[&_tr:last-child]:border-0", className)}
+      role="rowgroup"
       {...props}
     />
   )
@@ -60,6 +63,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
         "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
         className
       )}
+      role="row"
       {...props}
     />
   )
@@ -73,6 +77,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
         "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
+      scope="col"
       {...props}
     />
   )
@@ -86,6 +91,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
         "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
+      role="gridcell"
       {...props}
     />
   )
@@ -99,6 +105,7 @@ function TableCaption({
     <caption
       data-slot="table-caption"
       className={cn("text-muted-foreground mt-4 text-sm", className)}
+      role="caption"
       {...props}
     />
   )

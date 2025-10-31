@@ -58,15 +58,26 @@ export function AdminUserCreateModal({ open, onOpenChange, onSuccess }: AdminUse
     }
   }, [open])
 
-  const createUserMutation = trpc.admin.createUser.useMutation({
+  // Focus management: return focus to trigger when modal closes
+  useEffect(() => {
+    if (!open) {
+      // Find the trigger element that opened this modal
+      const trigger = document.querySelector('[data-state="closed"][data-slot="dialog-trigger"]') as HTMLElement
+      if (trigger) {
+        setTimeout(() => trigger.focus(), 100)
+      }
+    }
+  }, [open])
+
+  const createUserMutation = trpc.admin.users.createUser.useMutation({
     onSuccess: () => {
       toast.success('User created successfully!')
       reset()
       onOpenChange(false)
       onSuccess?.()
       // Invalidate and refetch user-related queries
-      utils.admin.getUsers.invalidate()
-      utils.admin.getCriticalDashboardData.invalidate()
+      utils.admin.users.getUsers.invalidate()
+      utils.admin.dashboard.getCriticalDashboardData.invalidate()
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to create user')
@@ -84,10 +95,31 @@ export function AdminUserCreateModal({ open, onOpenChange, onSuccess }: AdminUse
     onOpenChange(newOpen)
   }
 
-  // Keyboard navigation: handle Escape to close
+  // Keyboard navigation: handle Escape to close and Tab navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       handleOpenChange(false)
+    }
+    // Tab navigation within modal
+    if (e.key === 'Tab') {
+      const modal = e.currentTarget as HTMLElement
+      const focusableElements = modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      const firstElement = focusableElements[0] as HTMLElement
+      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement) {
+          lastElement.focus()
+          e.preventDefault()
+        }
+      } else {
+        if (document.activeElement === lastElement) {
+          firstElement.focus()
+          e.preventDefault()
+        }
+      }
     }
   }
 

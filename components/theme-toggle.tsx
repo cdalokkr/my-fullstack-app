@@ -25,11 +25,13 @@ export function ThemeToggle() {
       variant="outline"
       size="icon"
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      aria-pressed={theme === 'dark'}
     >
       {theme === 'dark' ? (
-        <Sun className="h-5 w-5" />
+        <Sun className="h-5 w-5" aria-hidden="true" />
       ) : (
-        <Moon className="h-5 w-5" />
+        <Moon className="h-5 w-5" aria-hidden="true" />
       )}
       <span className="sr-only">Toggle theme</span>
     </Button>

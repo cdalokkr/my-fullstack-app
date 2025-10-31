@@ -68,6 +68,11 @@ export function LogoutModal({ isOpen, onOpenChange }: LogoutModalProps) {
   // Handle success and auto-close with immediate redirect
   useEffect(() => {
     if (isSuccess) {
+      // Return focus to the logout trigger before closing
+      const logoutTrigger = document.querySelector('[aria-label="Logout"]') as HTMLElement
+      if (logoutTrigger) {
+        logoutTrigger.focus()
+      }
       onOpenChange(false)
       window.location.href = '/login'
     }
@@ -75,19 +80,19 @@ export function LogoutModal({ isOpen, onOpenChange }: LogoutModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open && contentLoading) return; onOpenChange(open); }}>
-      <DialogContent showCloseButton={false} className="sm:max-w-md">
+      <DialogContent showCloseButton={false} className="sm:max-w-md" role="alertdialog" aria-live="assertive">
         <DialogHeader>
           <DialogTitle>Logging Out</DialogTitle>
         </DialogHeader>
         <div className="flex items-center gap-4 py-4">
           {isSuccess ? (
             <>
-              <CheckCircle className="h-6 w-6 text-green-500" />
+              <CheckCircle className="h-6 w-6 text-green-500" aria-hidden="true" />
               <p className="text-sm text-green-600">Successfully signed out!</p>
             </>
           ) : (
             <>
-              <Loader2 className="h-6 w-6 animate-spin" />
+              <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
               <p className="text-sm text-muted-foreground">{loadingMessages[currentMessageIndex]}</p>
             </>
           )}

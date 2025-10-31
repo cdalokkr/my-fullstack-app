@@ -5,10 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-
 export type AsyncState = 'idle' | 'loading' | 'success' | 'error';
 
-interface AsyncButtonProps {
+export interface AsyncButtonProps extends React.ComponentProps<'button'> {
   /** The async operation to perform when clicked */
   onClick?: () => Promise<void> | void;
   /** Loading text to display */
@@ -17,8 +16,6 @@ interface AsyncButtonProps {
   successText?: string;
   /** Error text to display */
   errorText?: string;
-  /** Progressive loading phases with text and duration */
-  loadingPhases?: Array<{ text: string; duration: number }>;
   /** Duration to show success state before resetting (ms) */
   successDuration?: number;
   /** Duration to show error state before resetting (ms) */
@@ -35,11 +32,10 @@ interface AsyncButtonProps {
   onStateChange?: (state: AsyncState) => void;
   /** Button content when idle */
   children?: React.ReactNode;
-  /** Additional button props */
+  /** Button variant */
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  /** Button size */
   size?: 'default' | 'sm' | 'lg' | 'icon';
-  className?: string;
-  disabled?: boolean;
 }
 
 export function AsyncButton({
@@ -47,7 +43,6 @@ export function AsyncButton({
   loadingText = 'Loading...',
   successText = 'Success!',
   errorText = 'Error occurred',
-  loadingPhases,
   successDuration = 2000,
   errorDuration = 3000,
   autoReset = true,
@@ -58,9 +53,9 @@ export function AsyncButton({
   size,
   disabled,
   children,
+  ...props
 }: AsyncButtonProps) {
   const [state, setState] = useState<AsyncState>('idle');
-  const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
   const [operationComplete, setOperationComplete] = useState(false);
 
   const defaultIcons = {
@@ -81,42 +76,39 @@ export function AsyncButton({
       const timer = setTimeout(() => {
         console.log(`AsyncButton: Auto-reset timer fired, resetting from ${state} to idle`);
         setState('idle');
-        setCurrentPhaseIndex(0);
         setOperationComplete(false);
+        // Announce state change to screen readers
+        const announcement = document.createElement('div');
+        announcement.setAttribute('aria-live', 'polite');
+        announcement.setAttribute('aria-atomic', 'true');
+        announcement.style.position = 'absolute';
+        announcement.style.left = '-10000px';
+        announcement.style.width = '1px';
+        announcement.style.height = '1px';
+        announcement.style.overflow = 'hidden';
+        announcement.textContent = 'Operation completed, button ready for next action';
+        document.body.appendChild(announcement);
+        setTimeout(() => document.body.removeChild(announcement), 1000);
       }, duration);
 
       return () => clearTimeout(timer);
     }
   }, [state, autoReset, successDuration, errorDuration, onStateChange]);
 
-  // Handle progressive loading phases
+  // Handle progressive loading phases - simplified, no longer supported
   useEffect(() => {
-    if (state !== 'loading' || !loadingPhases || loadingPhases.length === 0) return;
+    if (state !== 'loading') return;
 
-    if (currentPhaseIndex >= loadingPhases.length) {
-      if (operationComplete) {
-        console.log('AsyncButton: All phases completed and operation done, setting success');
-        setState('success');
-      }
-      return;
+    if (operationComplete) {
+      setState('success');
     }
-
-    const phase = loadingPhases[currentPhaseIndex];
-    console.log(`AsyncButton: Starting phase ${currentPhaseIndex}: "${phase.text}" for ${phase.duration}ms`);
-    const timer = setTimeout(() => {
-      console.log(`AsyncButton: Phase ${currentPhaseIndex} completed, moving to next`);
-      setCurrentPhaseIndex(prev => prev + 1);
-    }, phase.duration);
-
-    return () => clearTimeout(timer);
-  }, [state, currentPhaseIndex, loadingPhases, operationComplete]);
+  }, [state, operationComplete]);
 
   const handleClick = async () => {
     if (state === 'loading' || !onClick) return;
 
     console.log('AsyncButton: Starting async operation, setting state to loading');
     setState('loading');
-    setCurrentPhaseIndex(0);
     setOperationComplete(false);
 
     try {
@@ -124,10 +116,6 @@ export function AsyncButton({
       await onClick();
       console.log('AsyncButton: Operation successful, marking complete');
       setOperationComplete(true);
-      // If no phases or phases already done, set success immediately
-      if (!loadingPhases || loadingPhases.length === 0 || currentPhaseIndex >= loadingPhases.length) {
-        setState('success');
-      }
     } catch (error) {
       console.error('AsyncButton: Operation failed, setting state to error:', error);
       setState('error');
@@ -137,14 +125,6 @@ export function AsyncButton({
   const getButtonContent = () => {
     switch (state) {
       case 'loading':
-        if (loadingPhases && loadingPhases.length > 0 && currentPhaseIndex < loadingPhases.length) {
-          return (
-            <>
-              {currentIcons.loading}
-              {loadingPhases[currentPhaseIndex].text}
-            </>
-          );
-        }
         return (
           <>
             {currentIcons.loading}
@@ -209,6 +189,8 @@ export function AsyncButton({
         state === 'error' && 'hover:bg-red-700',
         className
       )}
+      aria-live={state === 'loading' ? 'polite' : 'off'}
+      aria-busy={state === 'loading'}
     >
       {getButtonContent()}
     </Button>
@@ -216,14 +198,10 @@ export function AsyncButton({
 }
 
 // Pre-configured variants for common use cases
-export function LoginButton({ successDuration = 4000, ...props }: Omit<AsyncButtonProps, 'loadingText' | 'successText' | 'loadingPhases'>) {
-  const loadingPhases = [
-    { text: "Authenticating..", duration: 3000 },
-  ];
-
+export function LoginButton({ successDuration = 4000, ...props }: Omit<AsyncButtonProps, 'loadingText' | 'successText'>) {
   return (
     <AsyncButton
-      loadingPhases={loadingPhases}
+      loadingText="Authenticating..."
       successText="Success! Redirecting..."
       successDuration={successDuration}
       {...props}

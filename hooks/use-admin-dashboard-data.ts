@@ -37,15 +37,15 @@ interface AdminDashboardDataState {
 
 export function useAdminDashboardData(): AdminDashboardDataState {
   // Use tRPC hooks with custom stale times for parallel execution
-  const statsQuery = trpc.admin.getStats.useQuery(undefined, {
+  const statsQuery = trpc.admin.dashboard.getStats.useQuery(undefined, {
     staleTime: 30 * 1000, // 30 seconds
   })
   
-  const analyticsQuery = trpc.admin.getAnalytics.useQuery({ days: 7 }, {
+  const analyticsQuery = trpc.admin.analytics.getAnalytics.useQuery({ days: 7 }, {
     staleTime: 60 * 1000, // 60 seconds
   })
   
-  const activitiesQuery = trpc.admin.getRecentActivities.useQuery({ limit: 5 }, {
+  const activitiesQuery = trpc.admin.dashboard.getRecentActivities.useQuery({ limit: 5 }, {
     staleTime: 15 * 1000, // 15 seconds
   })
 
