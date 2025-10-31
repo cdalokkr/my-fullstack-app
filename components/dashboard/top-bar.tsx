@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Home } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -53,6 +53,7 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
 
 export function TopBar({ className, user }: TopBarProps) {
   const pathname = usePathname()
+  const { isMobile, state } = useSidebar()
   const breadcrumbs = generateBreadcrumbs(pathname)
   const currentPage = breadcrumbs[breadcrumbs.length - 1]
   const IconComponent = currentPage?.icon
@@ -60,43 +61,47 @@ export function TopBar({ className, user }: TopBarProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4",
+        "sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b bg-sidebar/95 backdrop-blur supports-[backdrop-filter]:bg-sidebar/80",
+        // Minimal left padding for close positioning to sidebar border
+        "pl-2 md:pl-4 lg:pl-4 peer-data-[state=collapsed]:md:pl-2 peer-data-[state=collapsed]:lg:pl-2",
         className
       )}
     >
       <SidebarTrigger className="-ml-1" />
-      <Breadcrumb className="hidden md:flex">
-        <BreadcrumbList>
-          {breadcrumbs.map((crumb, index) => (
-            <React.Fragment key={crumb.href}>
-              <BreadcrumbItem>
-                {crumb.isLast ? (
-                  <BreadcrumbPage className="flex items-center gap-2">
-                    {crumb.icon && <crumb.icon className="h-4 w-4" />}
-                    {crumb.label}
-                  </BreadcrumbPage>
-                ) : (
-                  <BreadcrumbLink asChild>
-                    <Link href={crumb.href} className="flex items-center gap-2">
-                      {crumb.icon && <crumb.icon className="h-4 w-4" />}
+      <div className="flex-1 flex items-center gap-3">
+        <Breadcrumb className="hidden md:flex">
+          <BreadcrumbList>
+            {breadcrumbs.map((crumb, index) => (
+              <React.Fragment key={crumb.href}>
+                <BreadcrumbItem>
+                  {crumb.isLast ? (
+                    <BreadcrumbPage className="flex items-center gap-2 text-sidebar-foreground">
+                      {crumb.icon && <crumb.icon className="h-4 w-4 text-sidebar-foreground" />}
                       {crumb.label}
-                    </Link>
-                  </BreadcrumbLink>
-                )}
-              </BreadcrumbItem>
-              {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
-            </React.Fragment>
-          ))}
-        </BreadcrumbList>
-      </Breadcrumb>
-      {/* Mobile breadcrumb - show only current page */}
-      <div className="md:hidden flex items-center gap-2">
-        {IconComponent && <IconComponent className="h-4 w-4" />}
-        <span className="text-sm font-medium">
-          {currentPage?.label}
-        </span>
+                    </BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbLink asChild>
+                      <Link href={crumb.href} className="flex items-center gap-2 text-sidebar-foreground/80 hover:bg-sidebar-accent">
+                        {crumb.icon && <crumb.icon className="h-4 w-4 text-sidebar-foreground" />}
+                        {crumb.label}
+                      </Link>
+                    </BreadcrumbLink>
+                  )}
+                </BreadcrumbItem>
+                {index < breadcrumbs.length - 1 && <BreadcrumbSeparator className="text-sidebar-foreground/60" />}
+              </React.Fragment>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
+        {/* Mobile breadcrumb - show only current page */}
+        <div className="md:hidden flex items-center gap-2">
+          {IconComponent && <IconComponent className="h-4 w-4 text-sidebar-foreground" />}
+          <span className="text-sm font-medium text-sidebar-foreground">
+            {currentPage?.label}
+          </span>
+        </div>
       </div>
-      <div className="ml-auto flex items-center gap-2">
+      <div className="flex items-center gap-2">
         <ThemeToggle />
         <UserProfilePopover user={user || null} />
       </div>

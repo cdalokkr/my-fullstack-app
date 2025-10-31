@@ -89,6 +89,110 @@ export const adminDashboardRouter = router({
       }
     }),
 
+  // NEW: Comprehensive dashboard endpoint that consolidates all data
+  getComprehensiveDashboardData: adminProcedure
+    .input(
+      z.object({
+        analyticsDays: z.number().default(7),
+        activitiesLimit: z.number().default(10),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      // Execute all queries in parallel for maximum performance
+      const [
+        usersCount,
+        activitiesCount,
+        todayActivities,
+        analytics,
+        recentActivities,
+        criticalMetrics,
+      ] = await Promise.all([
+        // Basic stats queries
+        ctx.supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        ctx.supabase.from('activities').select('*', { count: 'exact', head: true }),
+        ctx.supabase
+          .from('activities')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', new Date().toISOString().split('T')[0]),
+
+        // Analytics data
+        ctx.supabase
+          .from('analytics_metrics')
+          .select('*')
+          .gte('metric_date', new Date(Date.now() - input.analyticsDays * 24 * 60 * 60 * 1000).toISOString())
+          .order('metric_date', { ascending: true }),
+
+        // Recent activities
+        ctx.supabase
+          .from('activities')
+          .select('*, profiles(email, full_name)')
+          .order('created_at', { ascending: false })
+          .limit(input.activitiesLimit),
+
+        // Critical metrics (active users calculation)
+        ctx.supabase
+          .from('activities')
+          .select('user_id')
+          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+          .then(({ data }) => {
+            const uniqueUsers = new Set(data?.map(a => a.user_id))
+            return { count: uniqueUsers.size }
+          })
+      ])
+
+      // Construct comprehensive response
+      const criticalData = {
+        totalUsers: usersCount.count || 0,
+        activeUsers: criticalMetrics.count || 0,
+        metadata: {
+          tier: 'critical',
+          fetchedAt: new Date().toISOString(),
+          cacheExpiry: Date.now() + (15 * 1000),
+        }
+      }
+
+      const secondaryData = {
+        totalActivities: activitiesCount.count || 0,
+        todayActivities: todayActivities.count || 0,
+        analytics: analytics.data || [],
+        metadata: {
+          tier: 'secondary',
+          fetchedAt: new Date().toISOString(),
+          cacheExpiry: Date.now() + (30 * 1000),
+        }
+      }
+
+      const detailedData = {
+        recentActivities: recentActivities.data || [],
+        metadata: {
+          tier: 'detailed',
+          fetchedAt: new Date().toISOString(),
+          cacheExpiry: Date.now() + (60 * 1000),
+        }
+      }
+
+      return {
+        critical: criticalData,
+        secondary: secondaryData,
+        detailed: detailedData,
+        // Flat structure for convenience
+        stats: {
+          totalUsers: criticalData.totalUsers,
+          activeUsers: criticalData.activeUsers,
+          totalActivities: secondaryData.totalActivities,
+          todayActivities: secondaryData.todayActivities,
+        },
+        analytics: secondaryData.analytics,
+        recentActivities: detailedData.recentActivities,
+        metadata: {
+          consolidated: true,
+          fetchedAt: new Date().toISOString(),
+          version: '2.0.0',
+          cacheExpiry: Date.now() + (15 * 1000), // Use the shortest cache time
+        }
+      }
+    }),
+
   // Progressive loading endpoints for better perceived performance
   getCriticalDashboardData: adminProcedure.query(async ({ ctx }) => {
     // Tier 1: Critical data needed immediately (basic stats)

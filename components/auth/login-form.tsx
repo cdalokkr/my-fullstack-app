@@ -98,58 +98,84 @@ export function LoginForm() {
           const data = getValues();
           await onSubmit(data);
         }}
-        onStateChange={(state) => {
+        onStateChange={async (state) => {
           setIsLoading(state === 'loading' || state === 'success');
           if (state === 'success') {
-            (async () => {
-              try {
-                // Get profile from login response instead of making duplicate fetch
-                const profile = loginMutation.data?.profile;
-                if (!profile) return;
-                
-                // Store the fetched user profile in localStorage immediately
-                localStorage.setItem('userProfile', JSON.stringify(profile));
-                
-                // Add a small delay to ensure authentication context is updated
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
-                // Preload admin data in background (non-blocking) if user is admin
-                if (profile.role === 'admin') {
-                  try {
-                    // Use tRPC utils for prefetching (correct v11 pattern)
-                    await utils.admin.dashboard.getStats.prefetch();
-                    await utils.admin.analytics.getAnalytics.prefetch({ days: 7 });
-                    await utils.admin.dashboard.getRecentActivities.prefetch({ limit: 5 });
-                  } catch (error) {
-                    console.error('Error prefetching admin data:', error);
-                    // Continue with redirect even if prefetch fails
-                  }
-                }
-                
-                // Preload avatar image if available (non-blocking)
-                if (profile.avatar_url) {
-                  try {
-                    const img = new Image();
-                    img.src = profile.avatar_url;
-                  } catch (error) {
-                    console.error('Error preloading avatar:', error);
-                  }
-                }
-                
-                // Redirect after successful authentication and prefetching
-                router.push(profile.role === 'admin' ? '/admin' : '/user');
-              } catch (error) {
-                console.error('Error during login success handling:', error);
-                // Still redirect even if there's an error
-                const profile = loginMutation.data?.profile;
-                if (profile) {
-                  router.push(profile.role === 'admin' ? '/admin' : '/user');
+            // Keep showing success text while API calls are executing
+            try {
+              // Get profile from login response
+              const profile = loginMutation.data?.profile;
+              if (!profile) return;
+              
+              // Store the fetched user profile in localStorage immediately
+              localStorage.setItem('userProfile', JSON.stringify(profile));
+              
+              // Store session marker for splash screen
+              sessionStorage.setItem('sessionProfile', JSON.stringify(profile));
+              
+              // Add a small delay to ensure authentication context is updated
+              await new Promise(resolve => setTimeout(resolve, 100));
+              
+              // Execute API preloading with timeout to prevent hanging
+              const preloadingTimeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Preloading timeout')), 8000)
+              );
+              
+              // Preload critical dashboard data in parallel
+              if (profile.role === 'admin') {
+                try {
+                  const preloadingPromises = [
+                    utils.admin.dashboard.getComprehensiveDashboardData.prefetch({
+                      analyticsDays: 7,
+                      activitiesLimit: 10
+                    }),
+                    utils.admin.dashboard.getCriticalDashboardData.prefetch(),
+                    utils.admin.dashboard.getSecondaryDashboardData.prefetch({ analyticsDays: 7 }),
+                    utils.admin.dashboard.getDetailedDashboardData.prefetch(),
+                    utils.admin.analytics.getAnalytics.prefetch({ days: 7 }),
+                    utils.admin.dashboard.getStats.prefetch(),
+                    utils.admin.dashboard.getRecentActivities.prefetch({ limit: 5 })
+                  ].filter(Boolean);
+                  
+                  // Race between preloading and timeout
+                  await Promise.race([
+                    Promise.allSettled(preloadingPromises),
+                    preloadingTimeout
+                  ]);
+                  
+                } catch (error) {
+                  console.warn('Some prefetch operations failed or timed out:', error);
+                  // Continue with redirect even if preloading has issues
                 }
               }
-            })();
+              
+              // Preload avatar image if available (non-blocking)
+              if (profile.avatar_url) {
+                try {
+                  const img = new Image();
+                  img.src = profile.avatar_url;
+                } catch (error) {
+                  console.error('Error preloading avatar:', error);
+                }
+              }
+              
+              // Small delay to show success state, then redirect
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              
+              // Redirect after successful authentication and data preloading
+              router.push(profile.role === 'admin' ? '/admin' : '/user');
+              
+            } catch (error) {
+              console.error('Error during login success handling:', error);
+              // Still redirect even if there's an error
+              const profile = loginMutation.data?.profile;
+              if (profile) {
+                router.push(profile.role === 'admin' ? '/admin' : '/user');
+              }
+            }
           }
         }}
-        successDuration={4000}
+        successDuration={8000} // Extended duration to accommodate API preloading
         autoReset={false}
         className="w-full"
         size="lg"

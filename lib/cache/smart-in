@@ -1,0 +1,590 @@
+// ============================================
+// lib/cache/smart-invalidation.ts
+// Smart cache invalidation logic for Phase 3
+// ============================================
+
+import { cacheInvalidation, CacheInvalidationEvent } from './cache-invalidation';
+import { smartCacheManager, CacheEntry } from './smart-cache-manager';
+
+export interface SmartInvalidationConfig {
+  enablePatternMatching: boolean
+  enableDependencyTracking: boolean
+  enableConditionalInvalidation: boolean
+  maxInvalidationPatterns: number
+  invalidationDebounceTime: number
+  enableCrossComponentSync: boolean
+  enableIntelligentBatching: boolean
+  batchSize: number
+  batchTimeout: number
+}
+
+export interface InvalidationPattern {
+  pattern: string | RegExp
+  matchType: 'prefix' | 'suffix' | 'contains' | 'regex' | 'wildcard'
+  targetKeys: string[]
+  invalidationType: 'immediate' | 'debounced' | 'batch'
+  conditions?: InvalidationCondition[]
+  priority: number
+}
+
+export interface InvalidationCondition {
+  type: 'time-based' | 'user-activity' | 'data-change' | 'external-event'
+  condition: (context: any) => boolean
+  timeout?: number
+}
+
+export interface InvalidationStrategy {
+  sourceKey: string
+  targetKeys: string[]
+  strategy: 'direct' | 'pattern' | 'conditional' | 'cascade'
+  conditions?: InvalidationCondition[]
+  autoInvalidate: boolean
+  priority: number
+}
+
+export interface InvalidationMetrics {
+  totalInvalidations: number
+  successfulInvalidations: number
+  failedInvalidations: number
+  batchedInvalidations: number
+  patternMatches: number
+  dependencyInvalidations: number
+  averageInvalidationTime: number
+  patternsUsed: Map<string, number>
+}
+
+export class SmartInvalidator {
+  private static instance: SmartInvalidator;
+  private config: SmartInvalidationConfig;
+  private invalidationPatterns: Map<string, InvalidationPattern[]> = new Map();
+  private invalidationStrategies: Map<string, InvalidationStrategy> = new Map();
+  private pendingInvalidations: Map<string, NodeJS.Timeout> = new Map();
+  private batchQueue: InvalidationBatch[] = [];
+  private batchTimer: NodeJS.Timeout | null = null;
+  private metrics: InvalidationMetrics;
+  private invalidationHistory: CacheInvalidationEvent[] = [];
+
+  private constructor(config: Partial<SmartInvalidationConfig> = {}) {
+    this.config = {
+      enablePatternMatching: true,
+      enableDependencyTracking: true,
+      enableConditionalInvalidation: true,
+      maxInvalidationPatterns: 100,
+      invalidationDebounceTime: 100,
+      enableCrossComponentSync: true,
+      enableIntelligentBatching: true,
+      batchSize: 10,
+      batchTimeout: 50,
+      ...config
+    };
+
+    this.metrics = this.initializeMetrics();
+    this.initializeDefaultPatterns();
+    this.setupBatchProcessing();
+  }
+
+  static getInstance(config?: Partial<SmartInvalidationConfig>): SmartInvalidator {
+    if (!SmartInvalidator.instance) {
+      SmartInvalidator.instance = new SmartInvalidator(config);
+    }
+    return SmartInvalidator.instance;
+  }
+
+  private initializeMetrics(): InvalidationMetrics {
+    return {
+      totalInvalidations: 0,
+      successfulInvalidations: 0,
+      failedInvalidations: 0,
+      batchedInvalidations: 0,
+      patternMatches: 0,
+      dependencyInvalidations: 0,
+      averageInvalidationTime: 0,
+      patternsUsed: new Map()
+    };
+  }
+
+  private initializeDefaultPatterns(): void {
+    // Dashboard data patterns
+    this.addInvalidationPattern({
+      pattern: 'dashboard-*',
+      matchType: 'prefix',
+      targetKeys: ['dashboard-critical', 'dashboard-secondary', 'dashboard-detailed'],
+      invalidationType: 'immediate',
+      priority: 10
+    });
+
+    // User-related patterns
+    this.addInvalidationPattern({
+      pattern: 'user-profile-*',
+      matchType: 'prefix',
+      targetKeys: ['user-profile', 'dashboard-critical'],
+      invalidationType: 'debounced',
+      priority: 9
+    });
+
+    // Analytics patterns
+    this.addInvalidationPattern({
+      pattern: 'analytics-*',
+      matchType: 'prefix',
+      targetKeys: ['analytics-data', 'dashboard-secondary'],
+      invalidationType: 'batch',
+      priority: 5
+    });
+
+    // Cross-component patterns
+    this.addInvalidationPattern({
+      pattern: '*data-change*',
+      matchType: 'contains',
+      targetKeys: ['dashboard-critical', 'user-profile'],
+      invalidationType: 'immediate',
+      priority: 8
+    });
+  }
+
+  private setupBatchProcessing(): void {
+    if (this.config.enableIntelligentBatching) {
+      this.batchTimer = setInterval(() => {
+        this.processBatchQueue();
+      }, this.config.batchTimeout);
+    }
+  }
+
+  // Main invalidation method
+  invalidate(key: string, reason?: string, namespace?: string): void {
+    const startTime = Date.now();
+    this.metrics.totalInvalidations++;
+
+    try {
+      // Create invalidation event
+      const event: CacheInvalidationEvent = {
+        type: 'manual',
+        key,
+        namespace,
+        timestamp: Date.now(),
+        reason: reason || 'Manual invalidation'
+      };
+
+      // Add to history
+      this.addToHistory(event);
+
+      // Find matching patterns and execute
+      const matchedPatterns = this.findMatchingPatterns(key);
+      this.metrics.patternMatches += matchedPatterns.length;
+
+      for (const pattern of matchedPatterns) {
+        this.executePatternInvalidation(pattern, event);
+        this.recordPatternUsage(pattern.pattern.toString());
+      }
+
+      // Execute direct invalidation
+      this.executeDirectInvalidation(key, namespace);
+
+      // Handle batching if enabled
+      if (this.config.enableIntelligentBatching) {
+        this.addToBatchQueue(key, namespace, reason);
+      } else {
+        this.executeInvalidation(key, namespace);
+      }
+
+      this.metrics.successfulInvalidations++;
+      
+    } catch (error) {
+      this.metrics.failedInvalidations++;
+      console.error(`Smart invalidation failed for key ${key}:`, error);
+      throw error;
+    } finally {
+      const invalidationTime = Date.now() - startTime;
+      this.updateAverageInvalidationTime(invalidationTime);
+    }
+  }
+
+  invalidateNamespace(namespace: string, reason?: string): void {
+    const startTime = Date.now();
+    this.metrics.totalInvalidations++;
+
+    try {
+      const event: CacheInvalidationEvent = {
+        type: 'manual',
+        key: `namespace-${namespace}`,
+        namespace,
+        timestamp: Date.now(),
+        reason: reason || `Namespace ${namespace} invalidated`
+      };
+
+      this.addToHistory(event);
+
+      // Find namespace-specific patterns
+      const namespacePatterns = this.findNamespacePatterns(namespace);
+      for (const pattern of namespacePatterns) {
+        this.executePatternInvalidation(pattern, event);
+      }
+
+      // Execute namespace invalidation
+      smartCacheManager.invalidateNamespace(namespace);
+      this.metrics.successfulInvalidations++;
+
+    } catch (error) {
+      this.metrics.failedInvalidations++;
+      console.error(`Namespace invalidation failed for ${namespace}:`, error);
+      throw error;
+    } finally {
+      const invalidationTime = Date.now() - startTime;
+      this.updateAverageInvalidationTime(invalidationTime);
+    }
+  }
+
+  // Pattern-based invalidation
+  private findMatchingPatterns(key: string): InvalidationPattern[] {
+    if (!this.config.enablePatternMatching) return [];
+
+    const matchedPatterns: InvalidationPattern[] = [];
+
+    for (const [patternKey, patterns] of this.invalidationPatterns) {
+      for (const pattern of patterns) {
+        if (this.matchesPattern(key, pattern)) {
+          matchedPatterns.push(pattern);
+        }
+      }
+    }
+
+    // Sort by priority (highest first)
+    return matchedPatterns.sort((a, b) => b.priority - a.priority);
+  }
+
+  private matchesPattern(key: string, pattern: InvalidationPattern): boolean {
+    switch (pattern.matchType) {
+      case 'prefix':
+        return key.startsWith(pattern.pattern as string);
+      case 'suffix':
+        return key.endsWith(pattern.pattern as string);
+      case 'contains':
+        return key.includes(pattern.pattern as string);
+      case 'regex':
+        return (pattern.pattern as RegExp).test(key);
+      case 'wildcard':
+        return this.matchesWildcard(key, pattern.pattern as string);
+      default:
+        return false;
+    }
+  }
+
+  private matchesWildcard(key: string, pattern: string): boolean {
+    // Simple wildcard matching (supports * and ?)
+    const regex = new RegExp(pattern.replace(/\*/g, '.*').replace(/\?/g, '.'));
+    return regex.test(key);
+  }
+
+  private executePatternInvalidation(pattern: InvalidationPattern, event: CacheInvalidationEvent): void {
+    // Check conditions if any
+    if (pattern.conditions && !this.evaluateConditions(pattern.conditions, event)) {
+      return;
+    }
+
+    switch (pattern.invalidationType) {
+      case 'immediate':
+        pattern.targetKeys.forEach(targetKey => {
+          this.executeInvalidation(targetKey, event.namespace);
+        });
+        break;
+
+      case 'debounced':
+        this.scheduleDebouncedInvalidation(pattern.targetKeys, event);
+        break;
+
+      case 'batch':
+        pattern.targetKeys.forEach(targetKey => {
+          this.addToBatchQueue(targetKey, event.namespace, event.reason);
+        });
+        break;
+    }
+  }
+
+  private evaluateConditions(conditions: InvalidationCondition[], event: CacheInvalidationEvent): boolean {
+    return conditions.every(condition => {
+      try {
+        return condition.condition({
+          event,
+          timestamp: Date.now(),
+          cacheStats: smartCacheManager.getStats(),
+          systemLoad: this.getCurrentSystemLoad()
+        });
+      } catch (error) {
+        console.warn('Condition evaluation failed:', error);
+        return false;
+      }
+    });
+  }
+
+  private scheduleDebouncedInvalidation(targetKeys: string[], event: CacheInvalidationEvent): void {
+    const debounceKey = `debounced-${event.key}-${Date.now()}`;
+    const timer = setTimeout(() => {
+      targetKeys.forEach(targetKey => {
+        this.executeInvalidation(targetKey, event.namespace);
+      });
+      this.pendingInvalidations.delete(debounceKey);
+    }, this.config.invalidationDebounceTime);
+
+    this.pendingInvalidations.set(debounceKey, timer);
+  }
+
+  // Direct invalidation
+  private executeDirectInvalidation(key: string, namespace?: string): void {
+    // Check if there are strategies for this key
+    const strategy = this.invalidationStrategies.get(key);
+    if (strategy) {
+      this.executeStrategy(strategy);
+    }
+  }
+
+  private executeInvalidation(key: string, namespace?: string): void {
+    try {
+      smartCacheManager.delete(key, namespace);
+      
+      // Notify through the existing invalidation system
+      cacheInvalidation.invalidate(key, 'manual', 'Smart invalidation', undefined, namespace);
+      
+    } catch (error) {
+      console.error(`Failed to execute invalidation for ${key}:`, error);
+      throw error;
+    }
+  }
+
+  // Strategy-based invalidation
+  private executeStrategy(strategy: InvalidationStrategy): void {
+    switch (strategy.strategy) {
+      case 'direct':
+        strategy.targetKeys.forEach(key => {
+          this.executeInvalidation(key);
+        });
+        break;
+
+      case 'cascade':
+        this.executeCascadeInvalidation(strategy);
+        break;
+
+      case 'conditional':
+        this.executeConditionalInvalidation(strategy);
+        break;
+
+      case 'pattern':
+        // Pattern-based strategy would be handled by findMatchingPatterns
+        break;
+    }
+  }
+
+  private executeCascadeInvalidation(strategy: InvalidationStrategy): void {
+    let currentKey = strategy.sourceKey;
+    
+    const cascadeKeys = [...strategy.targetKeys];
+    
+    // Execute invalidations in cascade order
+    cascadeKeys.forEach((key, index) => {
+      setTimeout(() => {
+        this.executeInvalidation(key);
+      }, index * 10); // Small delay between cascade operations
+    });
+  }
+
+  private executeConditionalInvalidation(strategy: InvalidationStrategy): void {
+    if (strategy.conditions) {
+      const context = {
+        timestamp: Date.now(),
+        cacheStats: smartCacheManager.getStats(),
+        systemLoad: this.getCurrentSystemLoad()
+      };
+
+      const shouldInvalidate = strategy.conditions.every(condition => {
+        try {
+          return condition.condition(context);
+        } catch (error) {
+          console.warn('Conditional invalidation failed:', error);
+          return false;
+        }
+      });
+
+      if (shouldInvalidate) {
+        strategy.targetKeys.forEach(key => {
+          this.executeInvalidation(key);
+        });
+      }
+    }
+  }
+
+  // Batch processing
+  private addToBatchQueue(key: string, namespace?: string, reason?: string): void {
+    this.batchQueue.push({
+      key,
+      namespace,
+      reason,
+      timestamp: Date.now()
+    });
+
+    if (this.batchQueue.length >= this.config.batchSize) {
+      this.processBatchQueue();
+    }
+  }
+
+  private processBatchQueue(): void {
+    if (this.batchQueue.length === 0) return;
+
+    const batch = [...this.batchQueue];
+    this.batchQueue = [];
+
+    console.log(`Processing batch invalidation of ${batch.length} items`);
+
+    // Process batch
+    batch.forEach(item => {
+      try {
+        this.executeInvalidation(item.key, item.namespace);
+        this.metrics.batchedInvalidations++;
+      } catch (error) {
+        console.error(`Batch invalidation failed for ${item.key}:`, error);
+      }
+    });
+  }
+
+  // Dependency-based invalidation
+  shouldInvalidate(sourceKey: string, targetKeys: string[]): boolean {
+    if (!this.config.enableDependencyTracking) return true;
+
+    // Check if any target key has patterns that match the source key
+    for (const targetKey of targetKeys) {
+      const patterns = this.invalidationPatterns.get(targetKey);
+      if (patterns) {
+        for (const pattern of patterns) {
+          if (this.matchesPattern(sourceKey, pattern)) {
+            return true;
+          }
+        }
+      }
+
+      // Check strategy-based dependencies
+      const strategy = this.invalidationStrategies.get(targetKey);
+      if (strategy && strategy.sourceKey === sourceKey) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Public API for managing patterns and strategies
+  addInvalidationPattern(pattern: InvalidationPattern): void {
+    if (this.invalidationPatterns.size >= this.config.maxInvalidationPatterns) {
+      console.warn('Maximum invalidation patterns reached');
+      return;
+    }
+
+    const key = typeof pattern.pattern === 'string' ? pattern.pattern : pattern.pattern.toString();
+    const patterns = this.invalidationPatterns.get(key) || [];
+    patterns.push(pattern);
+    this.invalidationPatterns.set(key, patterns);
+  }
+
+  removeInvalidationPattern(pattern: string | RegExp): void {
+    const key = typeof pattern === 'string' ? pattern : pattern.toString();
+    this.invalidationPatterns.delete(key);
+  }
+
+  addInvalidationStrategy(strategy: InvalidationStrategy): void {
+    this.invalidationStrategies.set(strategy.sourceKey, strategy);
+  }
+
+  removeInvalidationStrategy(sourceKey: string): void {
+    this.invalidationStrategies.delete(sourceKey);
+  }
+
+  // Utility methods
+  private findNamespacePatterns(namespace: string): InvalidationPattern[] {
+    const patterns: InvalidationPattern[] = [];
+    
+    for (const patternList of this.invalidationPatterns.values()) {
+      for (const pattern of patternList) {
+        if (pattern.targetKeys.some(key => key.includes(namespace))) {
+          patterns.push(pattern);
+        }
+      }
+    }
+    
+    return patterns;
+  }
+
+  private getCurrentSystemLoad(): 'low' | 'medium' | 'high' {
+    // Simple heuristic based on cache hit rate and memory usage
+    const cacheStats = smartCacheManager.getStats();
+    
+    if (cacheStats.hitRate < 0.6) return 'high';
+    if (cacheStats.hitRate < 0.8) return 'medium';
+    return 'low';
+  }
+
+  private recordPatternUsage(pattern: string): void {
+    const current = this.metrics.patternsUsed.get(pattern) || 0;
+    this.metrics.patternsUsed.set(pattern, current + 1);
+  }
+
+  private updateAverageInvalidationTime(time: number): void {
+    const totalOperations = this.metrics.successfulInvalidations + this.metrics.failedInvalidations;
+    this.metrics.averageInvalidationTime = 
+      (this.metrics.averageInvalidationTime * (totalOperations - 1) + time) / totalOperations;
+  }
+
+  private addToHistory(event: CacheInvalidationEvent): void {
+    this.invalidationHistory.push(event);
+    
+    // Keep only recent history
+    if (this.invalidationHistory.length > 1000) {
+      this.invalidationHistory = this.invalidationHistory.slice(-1000);
+    }
+  }
+
+  // Public API methods for monitoring and management
+  getMetrics(): InvalidationMetrics {
+    return {
+      ...this.metrics,
+      patternsUsed: new Map(this.metrics.patternsUsed)
+    };
+  }
+
+  getInvalidationHistory(limit?: number): CacheInvalidationEvent[] {
+    if (limit) {
+      return this.invalidationHistory.slice(-limit);
+    }
+    return [...this.invalidationHistory];
+  }
+
+  getPatterns(): Map<string, InvalidationPattern[]> {
+    return new Map(this.invalidationPatterns);
+  }
+
+  getStrategies(): Map<string, InvalidationStrategy> {
+    return new Map(this.invalidationStrategies);
+  }
+
+  // Cleanup method
+  destroy(): void {
+    // Clear pending invalidations
+    this.pendingInvalidations.forEach(timer => clearTimeout(timer));
+    this.pendingInvalidations.clear();
+
+    // Clear batch processing
+    if (this.batchTimer) {
+      clearInterval(this.batchTimer);
+      this.batchTimer = null;
+    }
+
+    this.batchQueue = [];
+    this.invalidationPatterns.clear();
+    this.invalidationStrategies.clear();
+    this.invalidationHistory = [];
+  }
+}
+
+interface InvalidationBatch {
+  key: string
+  namespace?: string
+  reason?: string
+  timestamp: number
+}
+
+export const smartInvalidator = SmartInvalidator.getInstance();

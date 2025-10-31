@@ -1,0 +1,792 @@
+'use client'
+
+import React, { useState, useEffect, useMemo } from 'react'
+import { cn } from '@/lib/utils'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { 
+  FileText, 
+  Image, 
+  BarChart3, 
+  PieChart, 
+  Table, 
+  User, 
+  Users, 
+  Calendar,
+  Globe,
+  Cpu,
+  HardDrive,
+  Activity,
+  Zap,
+  Clock,
+  TrendingUp
+} from 'lucide-react'
+
+// Enhanced skeleton variants for different content types
+export enum SkeletonType {
+  LIST = 'list',
+  CARD = 'card',
+  TABLE = 'table',
+  CHART = 'chart',
+  FORM = 'form',
+  DASHBOARD = 'dashboard',
+  PROFILE = 'profile',
+  NAVIGATION = 'navigation',
+  METRICS = 'metrics',
+  TIMELINE = 'timeline'
+}
+
+// Skeleton animation modes
+export enum AnimationMode {
+  STATIC = 'static',           // No animation
+  PULSE = 'pulse',            // Standard pulse
+  SHIMMER = 'shimmer',        // Shimmer effect
+  WAVE = 'wave',              // Wave animation
+  GRADIENT = 'gradient',      // Gradient animation
+  STAGGERED = 'staggered'     // Staggered loading
+}
+
+// Base skeleton props
+export interface EnhancedSkeletonProps {
+  type: SkeletonType
+  variant?: AnimationMode
+  count?: number
+  delay?: number
+  className?: string
+  showHeader?: boolean
+  showFooter?: boolean
+  customContent?: boolean
+}
+
+// Advanced list skeleton with realistic content placeholders
+export function EnhancedListSkeleton({
+  count = 5,
+  variant = AnimationMode.STAGGERED,
+  className,
+  ...props
+}: Omit<EnhancedSkeletonProps, 'type'> & { count?: number }) {
+  const getIcon = (index: number) => {
+    const icons = [Users, FileText, Globe, Activity, Zap]
+    const Icon = icons[index % icons.length]
+    return <Icon className="h-4 w-4" />
+  }
+
+  const getLineCount = (index: number) => {
+    // Vary line counts for realism
+    const counts = [2, 3, 2, 1, 3, 2]
+    return counts[index % counts.length]
+  }
+
+  return (
+    <div className={cn('space-y-3', className)}>
+      {Array.from({ length: count }).map((_, i) => (
+        <Card 
+          key={i} 
+          className={cn(
+            'p-4 transition-all duration-300',
+            variant === AnimationMode.STAGGERED && `animate-fade-in`,
+            variant === AnimationMode.WAVE && 'animate-pulse'
+          )}
+          style={{ 
+            animationDelay: variant === AnimationMode.STAGGERED ? `${i * 100}ms` : undefined 
+          }}
+        >
+          <div className="flex items-start space-x-3">
+            {/* Avatar/icon placeholder */}
+            <div className="flex-shrink-0">
+              <Skeleton className="h-10 w-10 rounded-full" />
+            </div>
+            
+            {/* Content area */}
+            <div className="flex-1 min-w-0 space-y-2">
+              {/* Title line */}
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-4 w-3/4" />
+                {i % 3 === 0 && <Skeleton className="h-4 w-16" />}
+              </div>
+              
+              {/* Multiple description lines */}
+              {Array.from({ length: getLineCount(i) }).map((_, lineIndex) => (
+                <Skeleton 
+                  key={lineIndex} 
+                  className={cn(
+                    'h-3',
+                    {
+                      'w-full': lineIndex === 0,
+                      'w-5/6': lineIndex === 1,
+                      'w-2/3': lineIndex === 2
+                    }[lineIndex] || 'w-3/4'
+                  )}
+                />
+              ))}
+              
+              {/* Metadata line */}
+              <div className="flex items-center space-x-4 pt-1">
+                <Skeleton className="h-3 w-20" />
+                {i % 2 === 0 && <Skeleton className="h-3 w-16" />}
+                {i % 3 === 0 && <Skeleton className="h-3 w-12" />}
+              </div>
+            </div>
+            
+            {/* Action area */}
+            <div className="flex-shrink-0">
+              <Skeleton className="h-8 w-8 rounded-full" />
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+// Enhanced card skeleton with contextual elements
+export function EnhancedCardSkeleton({
+  variant = AnimationMode.PULSE,
+  showHeader = true,
+  showFooter = false,
+  className,
+  ...props
+}: Omit<EnhancedSkeletonProps, 'type'> & { 
+  variant?: AnimationMode
+  showHeader?: boolean
+  showFooter?: boolean
+}) {
+  return (
+    <Card className={cn('transition-all duration-300', className)}>
+      {showHeader && (
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+            <Skeleton className="h-6 w-20" />
+          </div>
+        </CardHeader>
+      )}
+      
+      <CardContent className="space-y-4">
+        {/* Main content area */}
+        <div className="space-y-3">
+          {/* Primary metric */}
+          <div className="text-center space-y-2">
+            <Skeleton className="h-8 w-20 mx-auto" />
+            <Skeleton className="h-4 w-16 mx-auto" />
+          </div>
+          
+          {/* Progress bar */}
+          <div className="space-y-2">
+            <Skeleton className="h-2 w-full" />
+            <div className="flex justify-between">
+              <Skeleton className="h-3 w-12" />
+              <Skeleton className="h-3 w-8" />
+            </div>
+          </div>
+          
+          {/* Secondary content */}
+          <div className="grid grid-cols-2 gap-4 pt-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-3 w-12" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-3 w-14" />
+            </div>
+          </div>
+          
+          {/* Chart area placeholder */}
+          <div className="relative">
+            <Skeleton className="h-32 w-full" />
+            <div className="absolute inset-0 flex items-end justify-around px-4 pb-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton 
+                  key={i} 
+                  className="w-4 rounded-t animate-pulse" 
+                  style={{ 
+                    height: `${Math.random() * 60 + 20}%`,
+                    animationDelay: `${i * 100}ms`
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+      
+      {showFooter && (
+        <CardContent className="pt-0">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-8 w-20" />
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  )
+}
+
+// Advanced table skeleton with column variations
+export function EnhancedTableSkeleton({
+  rows = 8,
+  columns = 4,
+  variant = AnimationMode.STAGGERED,
+  className,
+  ...props
+}: Omit<EnhancedSkeletonProps, 'type'> & { 
+  rows?: number
+  columns?: number
+  variant?: AnimationMode
+}) {
+  const columnSizes = ['w-24', 'flex-1', 'w-32', 'w-24', 'w-20', 'w-16']
+  
+  return (
+    <div className={cn('space-y-3', className)}>
+      {/* Table header */}
+      <div className="flex space-x-3">
+        {Array.from({ length: columns }).map((_, i) => (
+          <Skeleton 
+            key={i} 
+            className={cn('h-8', columnSizes[i] || 'flex-1')} 
+          />
+        ))}
+      </div>
+      
+      {/* Table rows */}
+      {Array.from({ length: rows }).map((_, rowIndex) => (
+        <div 
+          key={rowIndex} 
+          className={cn(
+            'flex space-x-3 p-4 rounded-lg bg-muted/30',
+            variant === AnimationMode.STAGGERED && 'animate-fade-in'
+          )}
+          style={{ 
+            animationDelay: variant === AnimationMode.STAGGERED ? `${rowIndex * 50}ms` : undefined 
+          }}
+        >
+          {/* Row number/id */}
+          <Skeleton className="h-6 w-6" />
+          
+          {/* Name/title column */}
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+          
+          {/* Status/role column */}
+          <Skeleton className="h-6 w-16" />
+          
+          {/* Date column */}
+          <Skeleton className="h-4 w-20" />
+          
+          {/* Actions column */}
+          <div className="flex space-x-2">
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-8 w-8" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Dashboard-specific skeleton layouts
+export function DashboardSkeleton({
+  layout = 'standard',
+  variant = AnimationMode.PULSE,
+  className,
+  ...props
+}: Omit<EnhancedSkeletonProps, 'type'> & { 
+  layout?: 'standard' | 'analytics' | 'admin' | 'user'
+  variant?: AnimationMode
+}) {
+  if (layout === 'analytics') {
+    return (
+      <div className={cn('space-y-6', className)}>
+        {/* Analytics header */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <div className="flex space-x-3">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-10" />
+          </div>
+        </div>
+
+        {/* Metrics grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <EnhancedCardSkeleton key={i} variant={variant} />
+          ))}
+        </div>
+
+        {/* Chart and data sections */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Main chart */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-4 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-64 w-full" />
+            </CardContent>
+          </Card>
+
+          {/* Recent activity */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </CardHeader>
+            <CardContent>
+              <EnhancedListSkeleton count={5} variant={variant} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  if (layout === 'admin') {
+    return (
+      <div className={cn('space-y-6', className)}>
+        {/* Admin header with user management */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-56" />
+            <Skeleton className="h-4 w-72" />
+          </div>
+          <div className="flex space-x-3">
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-10 w-40" />
+          </div>
+        </div>
+
+        {/* Stats overview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-8 w-16" />
+                  </div>
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* User table */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-48" />
+          </CardHeader>
+          <CardContent>
+            <EnhancedTableSkeleton rows={6} columns={5} variant={variant} />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Standard layout
+  return (
+    <div className={cn('space-y-6', className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <Skeleton className="h-10 w-32" />
+      </div>
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <EnhancedCardSkeleton key={i} variant={variant} />
+        ))}
+      </div>
+
+      {/* Main content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left column - recent activity */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-4 w-32" />
+            </CardHeader>
+            <CardContent>
+              <EnhancedListSkeleton count={6} variant={variant} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right column - sidebar */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-24" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center space-x-3">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <div className="space-y-1">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-2 w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-2 w-3/4" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Form skeleton with field variations
+export function FormSkeleton({
+  fields = 6,
+  variant = AnimationMode.STAGGERED,
+  className,
+  ...props
+}: Omit<EnhancedSkeletonProps, 'type'> & { 
+  fields?: number
+  variant?: AnimationMode
+}) {
+  const fieldTypes = ['text', 'email', 'password', 'select', 'textarea', 'checkbox', 'radio']
+  
+  return (
+    <div className={cn('space-y-6', className)}>
+      {/* Form header */}
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+
+      {/* Form fields */}
+      <div className="space-y-4">
+        {Array.from({ length: fields }).map((_, i) => {
+          const fieldType = fieldTypes[i % fieldTypes.length]
+          
+          return (
+            <div 
+              key={i} 
+              className={cn(
+                'space-y-2',
+                variant === AnimationMode.STAGGERED && 'animate-fade-in'
+              )}
+              style={{ 
+                animationDelay: variant === AnimationMode.STAGGERED ? `${i * 100}ms` : undefined 
+              }}
+            >
+              <Skeleton className="h-4 w-24" />
+              {fieldType === 'textarea' ? (
+                <Skeleton className="h-20 w-full" />
+              ) : fieldType === 'checkbox' || fieldType === 'radio' ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ) : (
+                <Skeleton className="h-10 w-full" />
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Form actions */}
+      <div className="flex space-x-3 pt-4">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+    </div>
+  )
+}
+
+// Profile/user card skeleton
+export function ProfileSkeleton({
+  variant = AnimationMode.PULSE,
+  className,
+  ...props
+}: Omit<EnhancedSkeletonProps, 'type'>) {
+  return (
+    <Card className={cn('p-6', className)}>
+      <div className="flex items-start space-x-6">
+        {/* Avatar */}
+        <Skeleton className="h-20 w-20 rounded-full" />
+        
+        {/* Profile info */}
+        <div className="flex-1 space-y-4">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+          
+          <div className="flex space-x-4">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+// Navigation skeleton
+export function NavigationSkeleton({
+  items = 6,
+  variant = AnimationMode.PULSE,
+  className,
+  ...props
+}: Omit<EnhancedSkeletonProps, 'type'> & { items?: number }) {
+  return (
+    <div className={cn('space-y-2', className)}>
+      {Array.from({ length: items }).map((_, i) => (
+        <div 
+          key={i} 
+          className={cn(
+            'flex items-center space-x-3 p-3 rounded-lg',
+            variant === AnimationMode.STAGGERED && 'animate-fade-in'
+          )}
+          style={{ 
+            animationDelay: variant === AnimationMode.STAGGERED ? `${i * 50}ms` : undefined 
+          }}
+        >
+          <Skeleton className="h-5 w-5" />
+          <Skeleton className="h-4 w-24" />
+          <div className="flex-1" />
+          <Skeleton className="h-4 w-8" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Timeline skeleton
+export function TimelineSkeleton({
+  items = 5,
+  variant = AnimationMode.STAGGERED,
+  className,
+  ...props
+}: Omit<EnhancedSkeletonProps, 'type'> & { items?: number }) {
+  return (
+    <div className={cn('space-y-6', className)}>
+      {Array.from({ length: items }).map((_, i) => (
+        <div 
+          key={i} 
+          className={cn(
+            'flex space-x-4',
+            variant === AnimationMode.STAGGERED && 'animate-fade-in'
+          )}
+          style={{ 
+            animationDelay: variant === AnimationMode.STAGGERED ? `${i * 150}ms` : undefined 
+          }}
+        >
+          {/* Timeline dot */}
+          <div className="flex flex-col items-center">
+            <Skeleton className="h-3 w-3 rounded-full" />
+            {i < items - 1 && <Skeleton className="h-16 w-px mt-2" />}
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 space-y-2 pb-6">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <div className="flex space-x-2 pt-2">
+              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-6 w-20" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Unified skeleton component factory
+export function EnhancedSkeleton({
+  type,
+  variant = AnimationMode.PULSE,
+  count = 1,
+  delay = 0,
+  className,
+  ...props
+}: EnhancedSkeletonProps) {
+  const skeletonProps = {
+    variant,
+    count,
+    delay,
+    className,
+    ...props
+  }
+
+  const skeletonMap = {
+    [SkeletonType.LIST]: () => <EnhancedListSkeleton {...skeletonProps} />,
+    [SkeletonType.CARD]: () => <EnhancedCardSkeleton {...skeletonProps} />,
+    [SkeletonType.TABLE]: () => <EnhancedTableSkeleton {...skeletonProps} />,
+    [SkeletonType.DASHBOARD]: () => <DashboardSkeleton {...skeletonProps} />,
+    [SkeletonType.FORM]: () => <FormSkeleton {...skeletonProps} />,
+    [SkeletonType.PROFILE]: () => <ProfileSkeleton {...skeletonProps} />,
+    [SkeletonType.NAVIGATION]: () => <NavigationSkeleton {...skeletonProps} />,
+    [SkeletonType.TIMELINE]: () => <TimelineSkeleton {...skeletonProps} />
+  }
+
+  const SkeletonComponent = skeletonMap[type]
+  
+  if (!SkeletonComponent) {
+    throw new Error(`Unknown skeleton type: ${type}`)
+  }
+
+  // Handle multiple instances
+  if (count > 1) {
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: count }).map((_, i) => (
+          <div
+            key={i}
+            style={{ 
+              animationDelay: delay > 0 ? `${delay * i}ms` : undefined 
+            }}
+          >
+            <SkeletonComponent />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return <SkeletonComponent />
+}
+
+// Custom animation utilities
+export function useSkeletonAnimations() {
+  const [isAnimating, setIsAnimating] = useState(false)
+
+  const triggerAnimation = () => {
+    setIsAnimating(true)
+    setTimeout(() => setIsAnimating(false), 2000)
+  }
+
+  return {
+    isAnimating,
+    triggerAnimation
+  }
+}
+
+// Preset skeleton configurations for common use cases
+export const SkeletonPresets = {
+  // Dashboard page
+  dashboard: () => (
+    <DashboardSkeleton 
+      layout="standard" 
+      variant={AnimationMode.STAGGERED}
+    />
+  ),
+
+  // Analytics page
+  analytics: () => (
+    <DashboardSkeleton 
+      layout="analytics" 
+      variant={AnimationMode.PULSE}
+    />
+  ),
+
+  // Admin page
+  admin: () => (
+    <DashboardSkeleton 
+      layout="admin" 
+      variant={AnimationMode.STAGGERED}
+    />
+  ),
+
+  // User profile page
+  profile: () => (
+    <div className="space-y-6">
+      <ProfileSkeleton />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-32" />
+          </CardHeader>
+          <CardContent>
+            <EnhancedListSkeleton count={4} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+          </CardHeader>
+          <CardContent>
+            <FormSkeleton fields={4} />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  ),
+
+  // Data table page
+  dataTable: () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+      <Card>
+        <CardContent className="p-6">
+          <EnhancedTableSkeleton rows={10} columns={6} />
+        </CardContent>
+      </Card>
+    </div>
+  ),
+
+  // Form page
+  form: () => (
+    <Card className="p-6">
+      <FormSkeleton fields={8} />
+    </Card>
+  )
+}
+
+export default EnhancedSkeleton

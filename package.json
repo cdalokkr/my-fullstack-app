@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "performance:validate": "ts-node scripts/performance-validation.ts",
+    "performance:validate:ci": "ts-node scripts/performance-validation.ts --continuous --output ci-results.json",
+    "performance:test": "ts-node scripts/performance-validation.ts --url http://localhost:3000 --verbose"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.33.2",

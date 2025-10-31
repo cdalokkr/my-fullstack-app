@@ -1,13 +1,19 @@
 'use client'
 
-import React from 'react'
+import React, { Suspense } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useProgressiveDashboardData } from '@/hooks/use-progressive-dashboard-data'
-import { ActivitySkeleton } from '@/components/dashboard/skeletons'
+import {
+  ActivitySkeleton,
+  MetricCardSkeleton,
+  MetricCardGridSkeleton,
+  ProgressiveActivitySkeleton
+} from '@/components/dashboard/skeletons'
+import { ErrorBoundary, LoadingFallback } from '@/components/ui/error-boundary'
 import { CreateUserForm } from './create-user-form'
 import {
   Users,
@@ -40,26 +46,26 @@ function MetricCard({ title, value, description, icon, loading, iconBgColor, ico
     const [isHovered, setIsHovered] = useState(false)
   
     return (
-    <Card className={`group shadow-lg bg-muted/30 transition-all duration-300 ease-in-out border-2 ${borderColor || 'border-transparent'} group-hover:${borderHoverColor}`} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
-      <CardHeader className=" pb-0">
-        <CardTitle className="text-xl font-medium">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-8 w-16" />
-        ) : (
-          <div className="flex items-center gap-4 mb-2">
-            <div className={`p-2 rounded-full ${iconBgColor || 'bg-gray-100'} transition-all duration-300 group-hover:${iconBgHover}`}>
-              {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, { className: `h-10 w-10 ${isHovered ? iconColorHover : (iconColor || 'text-muted-foreground')} transition-colors duration-300` }) : icon}
+      <Card className={`group shadow-lg bg-muted/30 border-2 ${borderColor || 'border-transparent'} group-hover:${borderHoverColor}`} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+        <CardHeader className="pb-0 pt-0">
+          <CardTitle className="text-xl font-medium m-0">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {loading ? (
+            <Skeleton className="h-6 w-12" />
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded-full ${iconBgColor || 'bg-gray-100'} group-hover:bg-opacity-80`}>
+                {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, { className: `h-8 w-8 ${isHovered ? iconColorHover : (iconColor || 'text-muted-foreground')}` }) : icon}
+              </div>
+              <div className="text-2xl font-bold">{value}</div>
             </div>
-            <div className="text-3xl font-bold">{value}</div>
-          </div>
-        )}
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </CardContent>
-    </Card>
-  )
-}
+          )}
+          <p className="text-sm text-muted-foreground mt-1">{description}</p>
+        </CardContent>
+      </Card>
+    )
+  }
 
 interface SectionWrapperProps {
   children: React.ReactNode
@@ -112,11 +118,20 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
     criticalData,
     secondaryData,
     detailedData,
+    comprehensiveData,
     isLoading,
     isError,
     errors,
     refetch
   } = useProgressiveDashboardData()
+
+  // Trigger dashboard data loaded event when critical data is available
+  useEffect(() => {
+    if (criticalData && !isLoading.critical) {
+      // Dispatch event to signal dashboard data is ready
+      window.dispatchEvent(new CustomEvent('dashboardDataLoaded'));
+    }
+  }, [criticalData, isLoading.critical])
 
   // Track overall loading state for parent component
   const isAnyLoading = isLoading.critical || isLoading.secondary || isLoading.detailed
@@ -164,22 +179,23 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
   }
 
   return (
-    <div className="space-y-6 gesture-friendly">
+    <div className="space-y-4 gesture-friendly">
       {/* Header with refresh button */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Admin Dashboard</h2>
-          <p className="text-muted-foreground">Overview of your application metrics and activities</p>
+          <h2 className="text-xl font-bold tracking-tight">Admin Dashboard</h2>
+          <p className="text-muted-foreground text-sm">Overview of your application metrics and activities</p>
         </div>
         <Button
           data-testid="refresh-all-button"
-          onClick={refetch.all}
+          onClick={refetch.comprehensive || refetch.all}
           variant="outline"
           disabled={isAnyLoading}
-          className="flex items-center gap-2"
+          className="flex items-center gap-1"
+          title={comprehensiveData ? 'Using comprehensive data endpoint' : 'Using progressive loading'}
         >
-          <RefreshCw className={`h-4 w-4 ${isAnyLoading ? 'animate-spin' : ''}`} />
-          Refresh All
+          <RefreshCw className={`h-3 w-3 ${isAnyLoading ? 'animate-spin' : ''}`} />
+          <span className="text-sm">Refresh All</span>
         </Button>
       </div>
 

@@ -74,11 +74,21 @@ interface ProgressiveDashboardDataState {
     secondary: () => void
     detailed: () => void
     all: () => void
+    comprehensive: () => void
   }
   cacheStatus: {
     critical: { hit: boolean; loading: boolean }
     secondary: { hit: boolean; loading: boolean }
     detailed: { hit: boolean; loading: boolean }
+  }
+  comprehensiveData?: {
+    critical: CriticalData
+    secondary: SecondaryData
+    detailed: DetailedData
+    stats: any
+    analytics: any[]
+    recentActivities: any[]
+    metadata: any
   }
 }
 
@@ -320,17 +330,55 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
     }
   }, [])
 
-  // Use React Query with cache-aware fetching
+  // Use the new comprehensive endpoint for optimal performance
+  const comprehensiveQuery = trpc.admin.dashboard.getComprehensiveDashboardData.useQuery(
+    { analyticsDays: 7, activitiesLimit: 10 },
+    {
+      staleTime: 15 * 1000, // 15 seconds
+      refetchOnWindowFocus: false,
+      queryFn: async () => {
+        // Use the comprehensive endpoint that fetches all data in one call
+        const response = await fetch('/api/trpc/admin.getComprehensiveDashboardData?input=%7B%22analyticsDays%22%3A7%2C%22activitiesLimit%22%3A10%7D', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch comprehensive dashboard data: ${response.status} ${response.statusText}`)
+        }
+
+        const data = await response.json()
+
+        if (!data?.result?.data) {
+          throw new Error('Invalid response structure for comprehensive dashboard data')
+        }
+
+        // Store in cache with adaptive TTL
+        await smartCacheManager.set('comprehensive-dashboard-data', data.result.data, {
+          namespace: 'dashboard',
+          dataType: 'comprehensive-dashboard-data',
+          context: getTTLContext('comprehensive-dashboard-data'),
+          metadata: { consolidated: true }
+        })
+
+        setCacheStatus(prev => ({ ...prev, critical: { hit: false, loading: false } }))
+        return data.result.data
+      },
+    }
+  )
+
+  // Fallback queries for progressive loading if comprehensive query fails
   const criticalQuery = trpc.admin.dashboard.getCriticalDashboardData.useQuery(undefined, {
     staleTime: 15 * 1000, // 15 seconds
     refetchOnWindowFocus: false,
+    enabled: !comprehensiveQuery.data, // Only run if comprehensive query hasn't returned data
     queryFn: fetchCriticalData,
   })
 
   const secondaryQuery = trpc.admin.dashboard.getSecondaryDashboardData.useQuery(
     { analyticsDays: 7 },
     {
-      enabled: !!criticalQuery.data,
+      enabled: !!comprehensiveQuery.data || !!criticalQuery.data,
       staleTime: 30 * 1000, // 30 seconds
       refetchOnWindowFocus: false,
       queryFn: fetchSecondaryData,
@@ -338,7 +386,7 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
   )
 
   const detailedQuery = trpc.admin.dashboard.getDetailedDashboardData.useQuery(undefined, {
-    enabled: !!secondaryQuery.data,
+    enabled: !!comprehensiveQuery.data || !!secondaryQuery.data,
     staleTime: 60 * 1000, // 60 seconds
     refetchOnWindowFocus: false,
     queryFn: fetchDetailedData,
@@ -351,52 +399,66 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
   }, [criticalQuery])
 
   const refetchSecondary = useCallback(() => {
-    if (criticalQuery.data) {
+    if (comprehensiveQuery.data || criticalQuery.data) {
       smartCacheManager.delete('secondary-dashboard-data', 'dashboard')
       secondaryQuery.refetch()
     }
-  }, [criticalQuery.data, secondaryQuery])
+  }, [comprehensiveQuery.data, criticalQuery.data, secondaryQuery])
 
   const refetchDetailed = useCallback(() => {
-    if (secondaryQuery.data) {
+    if (comprehensiveQuery.data || secondaryQuery.data) {
       smartCacheManager.delete('detailed-dashboard-data', 'dashboard')
       detailedQuery.refetch()
     }
-  }, [secondaryQuery.data, detailedQuery])
+  }, [comprehensiveQuery.data, secondaryQuery.data, detailedQuery])
+
+  const refetchComprehensive = useCallback(() => {
+    smartCacheManager.delete('comprehensive-dashboard-data', 'dashboard')
+    comprehensiveQuery.refetch()
+  }, [comprehensiveQuery])
 
   const refetchAll = useCallback(() => {
     smartCacheManager.invalidateNamespace('dashboard')
+    refetchComprehensive()
     refetchCritical()
-  }, [refetchCritical])
+  }, [refetchCritical, refetchComprehensive])
 
   // Memoize the state to prevent unnecessary re-renders
   const state = useMemo(() => ({
-    criticalData: criticalQuery.data || null,
-    secondaryData: secondaryQuery.data || null,
-    detailedData: detailedQuery.data || null,
+    criticalData: comprehensiveQuery.data?.critical || criticalQuery.data || null,
+    secondaryData: comprehensiveQuery.data?.secondary || secondaryQuery.data || null,
+    detailedData: comprehensiveQuery.data?.detailed || detailedQuery.data || null,
     isLoading: {
-      critical: criticalQuery.isLoading || cacheStatus.critical.loading,
-      secondary: secondaryQuery.isLoading || cacheStatus.secondary.loading,
-      detailed: detailedQuery.isLoading || cacheStatus.detailed.loading,
+      critical: comprehensiveQuery.isLoading || criticalQuery.isLoading || cacheStatus.critical.loading,
+      secondary: comprehensiveQuery.isLoading || secondaryQuery.isLoading || cacheStatus.secondary.loading,
+      detailed: comprehensiveQuery.isLoading || detailedQuery.isLoading || cacheStatus.detailed.loading,
     },
     isError: {
-      critical: criticalQuery.isError,
-      secondary: secondaryQuery.isError,
-      detailed: detailedQuery.isError,
+      critical: comprehensiveQuery.isError && criticalQuery.isError,
+      secondary: comprehensiveQuery.isError && secondaryQuery.isError,
+      detailed: comprehensiveQuery.isError && detailedQuery.isError,
     },
     errors: {
-      critical: criticalQuery.error,
-      secondary: secondaryQuery.error,
-      detailed: detailedQuery.error,
+      critical: comprehensiveQuery.error || criticalQuery.error,
+      secondary: comprehensiveQuery.error || secondaryQuery.error,
+      detailed: comprehensiveQuery.error || detailedQuery.error,
     },
     refetch: {
       critical: refetchCritical,
       secondary: refetchSecondary,
       detailed: refetchDetailed,
       all: refetchAll,
+      comprehensive: comprehensiveQuery.refetch,
     },
     cacheStatus,
+    // Include comprehensive data for components that can use it
+    comprehensiveData: comprehensiveQuery.data,
   }), [
+    comprehensiveQuery.data,
+    comprehensiveQuery.isLoading,
+    comprehensiveQuery.isError,
+    comprehensiveQuery.error,
+    comprehensiveQuery.refetch,
     criticalQuery.data,
     criticalQuery.isLoading,
     criticalQuery.isError,

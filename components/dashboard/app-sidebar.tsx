@@ -4,10 +4,13 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import dynamic from 'next/dynamic'
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, LogOut } from "lucide-react"
+import { useState } from "react"
 import { UserRole, Profile } from "@/types"
 import { Icons } from "@/components/icons"
 import { OrgSwitcher } from "@/components/org-switcher"
+import { UserAvatarProfile } from "@/components/user-avatar-profile"
+import { LogoutModal } from "@/components/ui/logout-modal"
 const UserProfilePopover = dynamic(() => import("./user-profile-popover").then(mod => ({ default: mod.UserProfilePopover })), {
   ssr: false,
   loading: () => <div className="flex items-center gap-2 rounded-md text-left w-full p-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"><div className="h-8 w-8 rounded-full bg-muted animate-pulse"></div></div>
@@ -115,6 +118,7 @@ NavItemComponent.displayName = 'NavItemComponent'
 
 export const AppSidebar = React.memo(({ role, tenants, defaultTenant, onTenantSwitch, user }: AppSidebarProps) => {
   const pathname = usePathname()
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
   const navItems = role === "admin" ? adminNavItems : userNavItems
 
   return (
@@ -138,7 +142,20 @@ export const AppSidebar = React.memo(({ role, tenants, defaultTenant, onTenantSw
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <UserProfilePopover user={user} />
+        <div
+          onClick={() => {
+            // Trigger logout modal - same behavior as top bar popup
+            setIsLogoutModalOpen(true)
+          }}
+          className="flex items-center justify-between p-3 rounded-md hover:bg-sidebar-accent transition-colors cursor-pointer group"
+        >
+          <UserAvatarProfile user={user} showInfo={true} className="h-8 w-8 group-hover:opacity-80 transition-opacity" />
+          <LogOut className="h-4 w-4 text-muted-foreground group-hover:text-sidebar-accent-foreground" />
+        </div>
+        <LogoutModal
+          isOpen={isLogoutModalOpen}
+          onOpenChange={setIsLogoutModalOpen}
+        />
       </SidebarFooter>
     </Sidebar>
   )
