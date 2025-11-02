@@ -35,11 +35,12 @@ import { Edit, Trash2, UserPlus, X, Save, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { AsyncButton } from '@/components/ui/async-button'
-import { CreateUserForm } from './create-user-form'
+import { UserOperationModalState } from './user-operation-modal-overlay'
+import { ModernAddUserModal } from './modern-add-user-modal'
 import toast from 'react-hot-toast'
 
 export default function UserManagement() {
-  const [showCreateUserForm, setShowCreateUserForm] = useState(false)
+  const [showModernAddUserModal, setShowModernAddUserModal] = useState(false)
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
   const [tempFirstName, setTempFirstName] = useState('')
   const [tempLastName, setTempLastName] = useState('')
@@ -56,12 +57,14 @@ export default function UserManagement() {
   const updateRoleMutation = trpc.admin.users.updateUserRole.useMutation({
     onError: (error) => {
       toast.error(error.message || 'Failed to update user role')
+      window.dispatchEvent(new CustomEvent('user-operation-complete'))
     },
   })
 
   const updateProfileMutation = trpc.admin.users.updateUserProfile.useMutation({
     onError: (error) => {
       toast.error(error.message || 'Failed to update user profile')
+      window.dispatchEvent(new CustomEvent('user-operation-complete'))
     },
   })
 
@@ -69,6 +72,7 @@ export default function UserManagement() {
     onSuccess: () => {
       refetch()
       setDeleteUserId(null)
+      window.dispatchEvent(new CustomEvent('user-operation-complete'))
     },
   })
 
@@ -84,19 +88,31 @@ export default function UserManagement() {
     if (!tempFirstName.trim() || !tempLastName.trim()) {
       throw new Error('First name and last name are required')
     }
+    
+    // Dispatch operation start event for modal overlay
+    window.dispatchEvent(new CustomEvent('user-operation-start', {
+      detail: { state: UserOperationModalState.UPDATING_USER }
+    }))
+    
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000))
-    // Update role
-    await updateRoleMutation.mutateAsync({
-      userId: editingUserId,
-      role: tempRole,
-    })
-    // Update profile fields
-    await updateProfileMutation.mutateAsync({
-      userId: editingUserId,
-      firstName: tempFirstName.trim(),
-      lastName: tempLastName.trim(),
-    })
+    
+    try {
+      // Update role
+      await updateRoleMutation.mutateAsync({
+        userId: editingUserId,
+        role: tempRole,
+      })
+      // Update profile fields
+      await updateProfileMutation.mutateAsync({
+        userId: editingUserId,
+        firstName: tempFirstName.trim(),
+        lastName: tempLastName.trim(),
+      })
+    } catch (error) {
+      // Error is handled by mutations' onError callbacks
+      throw error
+    }
   }
 
   const handleCancelEdit = () => {
@@ -108,37 +124,37 @@ export default function UserManagement() {
 
   const handleDeleteUser = () => {
     if (deleteUserId) {
+      // Dispatch operation start event for modal overlay
+      window.dispatchEvent(new CustomEvent('user-operation-start', {
+        detail: { state: UserOperationModalState.DELETING_USER }
+      }))
       deleteUserMutation.mutate({ userId: deleteUserId })
     }
   }
 
   if (error) {
     return (
-      <div className="p-4 text-center text-destructive">
+      <div className="text-center text-destructive">
         Error loading users: {error.message}
       </div>
     )
   }
 
-  if (showCreateUserForm) {
-    return (
-      <CreateUserForm
-        mode="inline"
-        onCancel={() => setShowCreateUserForm(false)}
-        onSuccess={() => {
-          refetch()
-          utils.admin.users.getUsers.invalidate()
-          utils.admin.dashboard.getCriticalDashboardData.invalidate()
-        }}
-      />
-    )
-  }
+  
 
   return (
-    <div className="space-y-4 pt-6 pl-6 pr-6 pb-6">
+    <div className="space-y-4">
+      {/* Header - matching admin dashboard style */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">User Management</h2>
-        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setShowCreateUserForm(true)} aria-label="Create new user">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight">User Management</h2>
+          <p className="text-muted-foreground text-sm">Manage user accounts and permissions</p>
+        </div>
+        <Button 
+          className="bg-primary text-primary-foreground hover:bg-primary/90" 
+          onClick={() => setShowModernAddUserModal(true)} 
+          aria-label="Create new user"
+        >
           <span className="inline-flex items-center justify-center w-4 h-4 mr-2">
             <UserPlus className="h-4 w-4 text-primary-foreground" aria-hidden="true" />
           </span>
@@ -146,12 +162,15 @@ export default function UserManagement() {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader className="m-0 p-0">
-          <CardTitle className="text-center m-0 p-0">All Users List</CardTitle>
-          <CardDescription className='m-0 p-0 text-muted-foreground text-center text-sm'>Double-click a row or click the edit icon to edit a record inline, then save or cancel changes.</CardDescription>
+      {/* User Table Card */}
+      <Card className="shadow-lg bg-muted/30">
+        <CardHeader>
+          <CardTitle>All Users List</CardTitle>
+          <CardDescription className='text-muted-foreground text-sm'>
+            Double-click a row or click the edit icon to edit a record inline, then save or cancel changes.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="px-6 py-0 pt-0">
+        <CardContent>
           <Table className="border border-border rounded-lg shadow-sm" aria-label="User management table">
             <TableHeader className="bg-blue-500/70 [&_tr]:border-0 hover:[&_tr]:bg-blue-500/10">
               <TableRow>
@@ -191,8 +210,16 @@ export default function UserManagement() {
                       key={user.id}
                       onDoubleClick={() => handleEditUser(user)}
                       className={`transition-colors duration-200 ${
-                        editingUserId === user.id ? 'bg-green-50' : 'bg-transparent hover:bg-blue-500/10'
-                      }`}
+                                      editingUserId === user.id ? 'bg-green-50' : 'bg-transparent hover:bg-blue-500/10'
+                                    }`}
+                      onClick={() => {
+                        // Dispatch operation start event for immediate user feedback
+                        if (isLoading) {
+                          window.dispatchEvent(new CustomEvent('user-operation-start', {
+                            detail: { state: UserOperationModalState.LOADING_USERS }
+                          }))
+                        }
+                      }}
                     >
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
@@ -340,6 +367,16 @@ export default function UserManagement() {
         </CardContent>
       </Card>
 
+      {/* Modern Add User Modal */}
+      <ModernAddUserModal
+        open={showModernAddUserModal}
+        onOpenChange={setShowModernAddUserModal}
+        onSuccess={() => {
+          refetch()
+          utils.admin.users.getUsers.invalidate()
+          utils.admin.dashboard.getCriticalDashboardData.invalidate()
+        }}
+      />
     </div>
   )
 }

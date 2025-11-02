@@ -14,7 +14,7 @@ import {
   ProgressiveActivitySkeleton
 } from '@/components/dashboard/skeletons'
 import { ErrorBoundary, LoadingFallback } from '@/components/ui/error-boundary'
-import { CreateUserForm } from './create-user-form'
+import { ModernAddUserModal } from './modern-add-user-modal'
 import {
   Users,
   Activity,
@@ -112,7 +112,7 @@ function SectionWrapper({
 }
 
 export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) {
-   const [showCreateUserForm, setShowCreateUserForm] = useState(false)
+   const [showModernAddUserModal, setShowModernAddUserModal] = useState(false)
 
   const {
     criticalData,
@@ -166,17 +166,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
     )
   }
 
-  if (showCreateUserForm) {
-    return (
-      <CreateUserForm
-        mode="inline"
-        onCancel={() => setShowCreateUserForm(false)}
-        onSuccess={() => {
-          refetch.all()
-        }}
-      />
-    )
-  }
+  
 
   return (
     <div className="space-y-4 gesture-friendly">
@@ -266,7 +256,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
               variant="outline"
               size="touch"
               className="group bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 "
-              onClick={() => setShowCreateUserForm(true)}
+              onClick={() => setShowModernAddUserModal(true)}
             >
               <span className="inline-flex items-center justify-center p-1 rounded-full bg-blue-100 mr-2 transition-colors duration-300 group-hover:bg-blue-200">
                 <UserPlus className="h-4 w-4 text-blue-600 transition-colors duration-300 group-hover:text-blue-700" />
@@ -340,6 +330,15 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
           )}
         </SectionWrapper>
       )}
+
+      {/* Modern Add User Modal */}
+      <ModernAddUserModal
+        open={showModernAddUserModal}
+        onOpenChange={setShowModernAddUserModal}
+        onSuccess={() => {
+          refetch.all()
+        }}
+      />
 
     </div>
   )

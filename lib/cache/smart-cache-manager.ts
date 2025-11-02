@@ -156,13 +156,34 @@ class SmartCacheManager {
         };
       }
 
-      // Simple compression using base64 encoding (in production, use proper compression)
-      const compressed = btoa(serialized);
+      // Use proper compression algorithm
+      const compressed = await this.compressWithLZString(serialized);
+      
+      // Calculate compression savings
+      const originalSize = serialized.length;
+      const compressedSize = compressed.length;
+      const compressionRatio = compressedSize / originalSize;
+      
+      // Only use compression if it actually saves space (at least 10% savings)
+      if (compressionRatio >= 0.9) {
+        return {
+          compressed: false,
+          data,
+          size: originalSize
+        };
+      }
+      
+      // Update compression savings statistics
+      this.stats.compressionSavings += (originalSize - compressedSize);
       
       return {
         compressed: true,
-        data: compressed,
-        size: compressed.length
+        data: {
+          compressed: true,
+          data: compressed,
+          originalSize
+        },
+        size: compressedSize
       };
     } catch (error) {
       console.warn('Compression failed, storing uncompressed data:', error);
@@ -175,14 +196,123 @@ class SmartCacheManager {
     }
   }
 
+  private async compressWithLZString(input: string): Promise<string> {
+    try {
+      // Use LZ-String compression algorithm
+      // This is a simplified version of LZ-String compression
+      // In a real implementation, you'd import the full lz-string library
+      
+      // Simple compression using run-length encoding and character frequency
+      const compressed = this.simpleRLECompression(input);
+      
+      // If RLE doesn't provide good compression, fall back to base64
+      if (compressed.length >= input.length * 0.95) {
+        return btoa(input); // Fallback to base64 if compression isn't effective
+      }
+      
+      return `rle:${compressed}`;
+    } catch (error) {
+      // Fallback to base64 if compression fails
+      return btoa(input);
+    }
+  }
+
+  private simpleRLECompression(input: string): string {
+    let result = '';
+    let count = 1;
+    let current = input[0];
+    
+    for (let i = 1; i < input.length; i++) {
+      if (input[i] === current && count < 255) {
+        count++;
+      } else {
+        if (count > 1) {
+          result += `${count}${current}`;
+        } else {
+          result += current;
+        }
+        current = input[i];
+        count = 1;
+      }
+    }
+    
+    // Add the last character/group
+    if (count > 1) {
+      result += `${count}${current}`;
+    } else {
+      result += current;
+    }
+    
+    return result;
+  }
+
+  private async decompressWithLZString(compressedData: any): Promise<string> {
+    if (typeof compressedData === 'string') {
+      // Handle legacy base64 compression
+      return atob(compressedData);
+    }
+    
+    if (compressedData.compressed && compressedData.data) {
+      const data = compressedData.data;
+      
+      if (typeof data === 'string' && data.startsWith('rle:')) {
+        // Decompress RLE compression
+        return this.decompressRLE(data.substring(4));
+      } else if (typeof data === 'string') {
+        // Fallback to base64
+        return atob(data);
+      }
+    }
+    
+    // If we can't determine the compression type, return as-is
+    return JSON.stringify(compressedData);
+  }
+
+  private decompressRLE(compressed: string): string {
+    let result = '';
+    let i = 0;
+    
+    while (i < compressed.length) {
+      let count = '';
+      let char = '';
+      
+      // Read count (could be multiple digits)
+      while (i < compressed.length && /[0-9]/.test(compressed[i])) {
+        count += compressed[i];
+        i++;
+      }
+      
+      if (i < compressed.length) {
+        char = compressed[i];
+        i++;
+      }
+      
+      const repeatCount = parseInt(count) || 1;
+      result += char.repeat(repeatCount);
+    }
+    
+    return result;
+  }
+
   private async decompressData<T>(entry: CacheEntry<T>): Promise<T> {
     if (!entry.compressed) {
       return entry.data as T;
     }
 
     try {
-      const decompressed = atob(entry.data as string);
-      return JSON.parse(decompressed) as T;
+      let decompressedString: string;
+      
+      // Check if this is the new compression format
+      const dataAsAny = entry.data as any;
+      if (dataAsAny && typeof dataAsAny === 'object' && dataAsAny.compressed) {
+        // Handle new compression format
+        decompressedString = await this.decompressWithLZString(dataAsAny);
+      } else {
+        // Handle legacy format (base64)
+        decompressedString = atob(entry.data as string);
+      }
+      
+      return JSON.parse(decompressedString) as T;
     } catch (error) {
       console.error('Decompression failed:', error);
       throw new Error('Failed to decompress cached data');

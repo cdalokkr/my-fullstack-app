@@ -34,7 +34,7 @@ function DashboardContent({
   if (isLoading) {
     return (
       <div className="w-full h-full overflow-auto">
-        <div className="min-h-full p-4 md:p-6 lg:p-8 pl-20 md:pl-24 lg:pl-24 space-y-6">
+        <div className="min-h-full p-4 md:p-6 lg:p-8 space-y-6">
           <div className="bg-background/50 backdrop-blur-sm rounded-lg border border-border/20 shadow-sm p-6 md:p-8 space-y-6">
             <div className="flex items-center justify-between space-y-2">
               <Skeleton className="h-8 w-48" />
@@ -54,7 +54,7 @@ function DashboardContent({
   if (!profile) {
     return (
       <div className="w-full h-full overflow-auto">
-        <div className="min-h-full p-4 md:p-6 lg:p-8 pl-20 md:pl-24 lg:pl-24 flex items-center justify-center">
+        <div className="min-h-full p-4 md:p-6 lg:p-8 flex items-center justify-center">
           <div className="bg-background/50 backdrop-blur-sm rounded-lg border border-border/20 shadow-sm p-6 md:p-8 text-center">
             <h2 className="text-2xl font-bold mb-4">Profile not found</h2>
             <p className="text-muted-foreground">Unable to load your profile information.</p>
@@ -66,7 +66,7 @@ function DashboardContent({
 
   return (
     <div className="w-full h-full overflow-auto">
-      <div className="min-h-full p-4 md:p-6 lg:p-8 pl-20 md:pl-24 lg:pl-24 space-y-6 scroll-smooth-touch mobile-optimized">
+      <div className="min-h-full p-4 md:p-6 lg:p-8 space-y-6 scroll-smooth-touch mobile-optimized">
         <div className="bg-background/50 backdrop-blur-sm rounded-lg border border-border/20 shadow-sm p-6 md:p-8">
           {profile.role === 'admin' ? <AdminOverview onLoadingChange={onLoadingChange} /> : <UserOverview profile={profile} onLoadingChange={onLoadingChange} />}
         </div>

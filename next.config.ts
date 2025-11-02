@@ -82,6 +82,15 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-tabs',
       '@radix-ui/react-tooltip',
     ],
+    // Next.js 16 cache management configuration
+    cacheComponents: true,
+    optimizeCss: true,
+    optimizeServerReact: true,
+    // Enable experimental cache features
+    staleTimes: {
+      dynamic: 60, // 1 minute
+      static: 86400, // 24 hours
+    },
   },
 
   // Bundle optimization configuration

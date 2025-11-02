@@ -14,6 +14,14 @@ import {
   BarChart3
 } from 'lucide-react'
 
+// Import UserManagementSkeleton
+import { 
+  UserManagementSkeleton, 
+  UserManagementSkeletonPresets,
+  UserManagementSkeletonVariant,
+  UserManagementAnimationMode
+} from '@/components/dashboard/skeletons/user-management-skeleton'
+
 // Enhanced skeleton variants for different content types
 export enum SkeletonType {
   LIST = 'list',
@@ -24,7 +32,8 @@ export enum SkeletonType {
   DASHBOARD = 'dashboard',
   PROFILE = 'profile',
   NAVIGATION = 'navigation',
-  TIMELINE = 'timeline'
+  TIMELINE = 'timeline',
+  USER_MANAGEMENT = 'user-management'
 }
 
 // Skeleton animation modes
@@ -614,6 +623,8 @@ export function EnhancedSkeleton({
             ))}
           </div>
         )
+      case SkeletonType.USER_MANAGEMENT:
+        return <UserManagementSkeletonStandard variant={variant} className={className} />
       default:
         throw new Error(`Unknown skeleton type: ${type}`)
     }
@@ -635,6 +646,77 @@ export function useSkeletonAnimations() {
     isAnimating,
     triggerAnimation
   }
+}
+
+// User management skeleton presets for enhanced-skeletons integration
+export const UserManagementSkeletonIntegration = {
+  // Standard user management skeleton
+  standard: () => (
+    <UserManagementSkeleton
+      variant={UserManagementSkeletonVariant.STANDARD}
+      animationMode={UserManagementAnimationMode.STAGGERED}
+      rowCount={8}
+    />
+  ),
+
+  // Compact version for dashboard widgets
+  dashboard: () => (
+    <UserManagementSkeleton
+      variant={UserManagementSkeletonVariant.COMPACT}
+      animationMode={UserManagementAnimationMode.STAGGERED}
+      rowCount={6}
+      showCreateButton={false}
+      showFilters={false}
+      showPagination={false}
+    />
+  ),
+
+  // Minimal version for fast loading
+  minimal: () => (
+    <UserManagementSkeleton
+      variant={UserManagementSkeletonVariant.COMPACT}
+      animationMode={UserManagementAnimationMode.STATIC}
+      rowCount={5}
+      showHeader={false}
+      showSearchBar={false}
+      showActions={false}
+    />
+  ),
+
+  // Detailed version for full admin interface
+  detailed: () => (
+    <UserManagementSkeleton
+      variant={UserManagementSkeletonVariant.DETAILED}
+      animationMode={UserManagementAnimationMode.STAGGERED}
+      rowCount={10}
+      showFilters={true}
+      showPagination={true}
+      showBulkActions={true}
+    />
+  )
+}
+
+// Helper function to handle user management skeleton with AnimationMode
+function UserManagementSkeletonStandard({ 
+  variant = AnimationMode.STAGGERED, 
+  className 
+}: { 
+  variant?: AnimationMode
+  className?: string 
+}) {
+  const animationMode = variant === AnimationMode.STATIC ? UserManagementAnimationMode.STATIC :
+                       variant === AnimationMode.PULSE ? UserManagementAnimationMode.PULSE :
+                       variant === AnimationMode.WAVE ? UserManagementAnimationMode.WAVE :
+                       UserManagementAnimationMode.STAGGERED
+
+  return (
+    <UserManagementSkeleton
+      variant={UserManagementSkeletonVariant.STANDARD}
+      animationMode={animationMode}
+      rowCount={8}
+      className={className}
+    />
+  )
 }
 
 // Preset configurations
@@ -702,6 +784,37 @@ export const SkeletonPresets = {
     <Card className="p-6">
       <FormSkeleton fields={8} />
     </Card>
+  ),
+
+  // User management specific presets
+  userManagement: () => (
+    <UserManagementSkeleton
+      variant={UserManagementSkeletonVariant.STANDARD}
+      animationMode={UserManagementAnimationMode.STAGGERED}
+      rowCount={8}
+    />
+  ),
+
+  userManagementDashboard: () => (
+    <UserManagementSkeleton
+      variant={UserManagementSkeletonVariant.COMPACT}
+      animationMode={UserManagementAnimationMode.STAGGERED}
+      rowCount={6}
+      showCreateButton={false}
+      showFilters={false}
+      showPagination={false}
+    />
+  ),
+
+  userManagementMinimal: () => (
+    <UserManagementSkeleton
+      variant={UserManagementSkeletonVariant.COMPACT}
+      animationMode={UserManagementAnimationMode.STATIC}
+      rowCount={5}
+      showHeader={false}
+      showSearchBar={false}
+      showActions={false}
+    />
   )
 }
 

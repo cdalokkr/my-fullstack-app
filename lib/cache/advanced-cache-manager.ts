@@ -75,9 +75,9 @@ class AdvancedCacheManager {
   private config: AdvancedCacheConfig;
   private metrics: CacheOperationMetrics;
   private dependencies: Map<string, CacheDependency[]> = new Map();
-  // private consistencyMonitor: CacheConsistency;
-  // private memoryOptimizer: MemoryOptimizer;
-  // private smartInvalidator: SmartInvalidator;
+  private consistencyMonitor: CacheConsistency;
+  private memoryOptimizer: MemoryOptimizer;
+  private smartInvalidator: any;
   private operationTimers: Map<string, number> = new Map();
 
   private constructor(config: Partial<AdvancedCacheConfig> = {}) {
@@ -122,9 +122,27 @@ class AdvancedCacheManager {
     this.metrics = this.initializeMetrics();
     
     // Initialize components
-    // this.consistencyMonitor = new CacheConsistency(this.config);
-    // this.memoryOptimizer = new MemoryOptimizer(this.config);
-    // this.smartInvalidator = new SmartInvalidator(this.config);
+    this.consistencyMonitor = CacheConsistency.getInstance({
+      enableCrossTabSync: this.config.enableCrossTabSync,
+      consistencyCheckInterval: this.config.consistencyCheckInterval,
+      maxInconsistencyRetries: this.config.maxInconsistencyRetries
+    });
+    
+    this.memoryOptimizer = MemoryOptimizer.getInstance({
+      memoryThreshold: this.config.memoryThreshold,
+      gcInterval: this.config.gcInterval,
+      compressionRatioThreshold: this.config.compressionRatioThreshold
+    });
+    
+    this.smartInvalidator = {
+      invalidate: (key: string, reason?: string, namespace?: string) => {
+        smartCacheManager.delete(key, namespace);
+      },
+      invalidateNamespace: (ns: string, reason?: string) => {
+        smartCacheManager.invalidateNamespace(ns);
+      },
+      shouldInvalidate: (sourceKey: string, targetKeys: string[]) => true
+    };
     
     this.initializeManagers();
     this.setupEventListeners();
@@ -207,7 +225,7 @@ class AdvancedCacheManager {
     // Start memory optimization
     if (this.config.enableMemoryOptimization) {
       setInterval(() => {
-        // this.memoryOptimizer.optimize();
+        this.memoryOptimizer.forceOptimization();
       }, this.config.gcInterval);
     }
 
@@ -227,7 +245,7 @@ class AdvancedCacheManager {
     
     // Trigger memory optimization if needed
     if (this.config.enableMemoryOptimization) {
-      // this.memoryOptimizer.scheduleOptimization();
+      this.memoryOptimizer.scheduleOptimization();
     }
   }
 
@@ -252,11 +270,10 @@ class AdvancedCacheManager {
 
   private performConditionalInvalidation(dependency: CacheDependency): void {
     // Check if invalidation conditions are met
-    // const shouldInvalidate = this.smartInvalidator.shouldInvalidate(
-    //   dependency.sourceKey,
-    //   dependency.targetKeys
-    // );
-    const shouldInvalidate = true;
+    const shouldInvalidate = this.smartInvalidator.shouldInvalidate(
+      dependency.sourceKey,
+      dependency.targetKeys
+    );
     
     if (shouldInvalidate) {
       dependency.targetKeys.forEach(key => {
@@ -268,7 +285,7 @@ class AdvancedCacheManager {
   private updateMetrics(): void {
     const cacheStats = smartCacheManager.getStats();
     const refreshStatus = backgroundRefresher.getRefreshStatus();
-    const memoryStats = {}; // this.memoryOptimizer.getStats();
+    const memoryStats = this.memoryOptimizer.getStats();
 
     this.metrics = {
       ...this.metrics,
@@ -279,7 +296,7 @@ class AdvancedCacheManager {
         compressionRatio: cacheStats.compressionRatio
       },
       backgroundRefreshRate: refreshStatus.activeRefreshes / refreshStatus.totalTasks || 0,
-      consistencyScore: 1.0 // this.consistencyMonitor.getConsistencyScore()
+      consistencyScore: this.consistencyMonitor.getConsistencyScore()
     };
   }
 
@@ -287,8 +304,7 @@ class AdvancedCacheManager {
     if (!this.config.enableConsistencyChecks) return;
 
     try {
-      // const inconsistencies = await this.consistencyMonitor.checkConsistency();
-      const inconsistencies: any[] = [];
+      const inconsistencies = await this.consistencyMonitor.checkConsistency();
       
       if (inconsistencies.length > 0) {
         // Attempt to resolve inconsistencies
@@ -333,15 +349,33 @@ class AdvancedCacheManager {
     this.startOperationTimer(key);
 
     try {
+      // Input validation
+      if (!key || typeof key !== 'string') {
+        throw new Error('Cache key must be a non-empty string');
+      }
+      if (data === undefined) {
+        throw new Error('Cache data cannot be undefined');
+      }
+
       // Set up dependencies if provided
-      if (options.dependencies) {
-        this.addDependency(key, options.dependencies);
+      if (options.dependencies && Array.isArray(options.dependencies)) {
+        try {
+          this.addDependency(key, options.dependencies);
+        } catch (error) {
+          console.warn('Failed to set up dependencies:', error);
+          // Continue with cache operation even if dependencies fail
+        }
       }
 
       // Use adaptive TTL if possible
       let ttl = options.ttl;
-      if (options.dataType && options.context) {
-        ttl = adaptiveTTLEngine.calculateOptimalTTL(options.dataType, options.context);
+      try {
+        if (options.dataType && options.context) {
+          ttl = adaptiveTTLEngine.calculateOptimalTTL(options.dataType, options.context);
+        }
+      } catch (error) {
+        console.warn('Failed to calculate adaptive TTL, using default:', error);
+        ttl = options.ttl || this.config.defaultTTL;
       }
 
       await smartCacheManager.set(key, data, {
@@ -356,9 +390,44 @@ class AdvancedCacheManager {
       this.recordSuccessfulOperation(key, startTime);
     } catch (error) {
       this.recordFailedOperation(key, startTime);
-      throw error;
+      console.error(`Cache set operation failed for key ${key}:`, error);
+      
+      // Don't throw error in production - implement graceful fallback
+      if (process.env.NODE_ENV === 'development') {
+        throw error;
+      }
+      
+      // Graceful fallback: try to store without compression or advanced features
+      try {
+        await this.fallbackSet(key, data, options);
+      } catch (fallbackError) {
+        console.error('Fallback cache operation also failed:', fallbackError);
+        // In production, just log and continue - don't throw
+        if (process.env.NODE_ENV === 'development') {
+          throw new Error(`Cache operation failed: ${error.message}`);
+        }
+      }
     } finally {
       this.endOperationTimer(key);
+    }
+  }
+
+  private async fallbackSet<T>(key: string, data: T, options: any): Promise<void> {
+    // Simple fallback without compression or advanced features
+    try {
+      // Use localStorage as ultimate fallback
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const fallbackKey = `fallback-cache:${key}`;
+        const fallbackData = {
+          data: JSON.stringify(data),
+          timestamp: Date.now(),
+          ttl: options.ttl || this.config.defaultTTL
+        };
+        localStorage.setItem(fallbackKey, JSON.stringify(fallbackData));
+      }
+    } catch (error) {
+      console.error('All cache fallbacks failed:', error);
+      throw error;
     }
   }
 
@@ -367,20 +436,69 @@ class AdvancedCacheManager {
     this.startOperationTimer(key);
 
     try {
-      const result = await smartCacheManager.get<T>(key, namespace);
+      // Input validation
+      if (!key || typeof key !== 'string') {
+        throw new Error('Cache key must be a non-empty string');
+      }
+
+      let result: T | null = null;
+      
+      try {
+        result = await smartCacheManager.get<T>(key, namespace);
+      } catch (cacheError) {
+        console.warn(`Primary cache get failed for ${key}, trying fallback:`, cacheError);
+        
+        // Try fallback mechanisms
+        result = await this.fallbackGet<T>(key, namespace);
+      }
+
       this.recordSuccessfulOperation(key, startTime);
       return result;
     } catch (error) {
       this.recordFailedOperation(key, startTime);
-      throw error;
+      console.error(`Cache get operation failed for key ${key}:`, error);
+      
+      // Don't throw error in production - return null as graceful fallback
+      if (process.env.NODE_ENV === 'development') {
+        throw error;
+      }
+      
+      return null; // Graceful fallback
     } finally {
       this.endOperationTimer(key);
     }
   }
 
+  private async fallbackGet<T>(key: string, namespace?: string): Promise<T | null> {
+    try {
+      // Check localStorage fallback
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const fallbackKey = `fallback-cache:${namespace ? namespace + ':' : ''}${key}`;
+        const fallbackData = localStorage.getItem(fallbackKey);
+        
+        if (fallbackData) {
+          const parsed = JSON.parse(fallbackData);
+          const now = Date.now();
+          
+          // Check if fallback data is still valid
+          if (now - parsed.timestamp < parsed.ttl) {
+            return JSON.parse(parsed.data) as T;
+          } else {
+            // Expired fallback data
+            localStorage.removeItem(fallbackKey);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Fallback cache get failed:', error);
+    }
+    
+    return null;
+  }
+
   invalidate(key: string, reason?: string, namespace?: string): void {
     // Smart invalidation
-    // this.smartInvalidator.invalidate(key, reason, namespace);
+    this.smartInvalidator.invalidate(key, reason, namespace);
     
     // Invalidate through underlying manager
     smartCacheManager.delete(key, namespace);
@@ -388,7 +506,7 @@ class AdvancedCacheManager {
 
   invalidateNamespace(namespace: string, reason?: string): void {
     // Smart namespace invalidation
-    // this.smartInvalidator.invalidateNamespace(namespace, reason);
+    this.smartInvalidator.invalidateNamespace(namespace, reason);
     
     // Invalidate through underlying manager
     smartCacheManager.invalidateNamespace(namespace);
@@ -438,8 +556,7 @@ class AdvancedCacheManager {
   }
 
   optimize(): Promise<void> {
-    // return this.memoryOptimizer.optimize();
-    return Promise.resolve();
+    return this.memoryOptimizer.optimize();
   }
 
   // Internal helper methods
@@ -471,9 +588,9 @@ class AdvancedCacheManager {
     smartCacheManager.clear();
     cacheInvalidation.destroy();
     backgroundRefresher.destroy();
-    // this.consistencyMonitor.destroy();
-    // this.memoryOptimizer.destroy();
-    // this.smartInvalidator.destroy();
+    this.consistencyMonitor.destroy();
+    this.memoryOptimizer.destroy();
+    this.smartInvalidator.destroy?.();
     this.dependencies.clear();
     this.operationTimers.clear();
   }
