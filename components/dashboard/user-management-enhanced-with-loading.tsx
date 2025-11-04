@@ -522,9 +522,9 @@ export function UserManagementEnhancedWithLoading() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={Math.floor(usersQuery.data?.total / usersQuery.data?.users.length) + 1 <= 1}
+                    disabled={Math.floor((usersQuery.data?.total || 0) / (usersQuery.data?.users?.length || 1)) + 1 <= 1}
                     onClick={() => {
-                      const currentPage = Math.floor(usersQuery.data?.total / usersQuery.data?.users.length) + 1
+                      const currentPage = Math.floor((usersQuery.data?.total || 0) / (usersQuery.data?.users?.length || 1)) + 1
                       goToPage(Math.max(1, currentPage - 1))
                     }}
                   >
@@ -533,10 +533,10 @@ export function UserManagementEnhancedWithLoading() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={Math.floor(usersQuery.data?.total / usersQuery.data?.users.length) + 1 >= usersQuery.data.pages}
+                    disabled={Math.floor((usersQuery.data?.total || 0) / (usersQuery.data?.users?.length || 1)) + 1 >= (usersQuery.data?.pages || 1)}
                     onClick={() => {
-                      const currentPage = Math.floor(usersQuery.data?.total / usersQuery.data?.users.length) + 1
-                      goToPage(Math.min(usersQuery.data.pages, currentPage + 1))
+                      const currentPage = Math.floor((usersQuery.data?.total || 0) / (usersQuery.data?.users?.length || 1)) + 1
+                      goToPage(Math.min(usersQuery.data?.pages || 1, currentPage + 1))
                     }}
                   >
                     Next

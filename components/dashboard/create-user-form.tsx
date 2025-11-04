@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createUserSchema, type CreateUserInput } from '@/lib/validations/auth'
@@ -54,6 +54,7 @@ export function CreateUserForm({
 }: CreateUserFormProps) {
   const utils = trpc.useUtils()
   const firstInputRef = useRef<HTMLInputElement>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   const {
     register,
@@ -81,23 +82,28 @@ export function CreateUserForm({
     onSuccess: () => {
       toast.success('User created successfully!')
       reset()
-      onSuccess?.()
-      if (mode === 'modal') {
-        onOpenChange?.(false)
-      } else if (mode === 'inline') {
-        setTimeout(() => {
-          onCancel?.()
-        }, 2000)
-      }
+      // Invalidate and refetch user-related queries
       utils.admin.users.getUsers.invalidate()
       utils.admin.dashboard.getCriticalDashboardData.invalidate()
+      // Close modal or handle inline mode after a short delay to allow success state to be visible
+      setTimeout(() => {
+        if (mode === 'modal') {
+          onOpenChange?.(false)
+        } else if (mode === 'inline') {
+          onCancel?.()
+        }
+        onSuccess?.()
+        setIsLoading(false)
+      }, 1000)
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to create user')
+      setIsLoading(false)
     },
   })
 
   const onSubmit = async (data: CreateUserInput) => {
+    setIsLoading(true)
     await createUserMutation.mutateAsync(data)
   }
 
@@ -127,6 +133,7 @@ export function CreateUserForm({
               placeholder="John"
               {...register('firstName')}
               aria-describedby={errors.firstName ? "firstName-error" : undefined}
+              disabled={isLoading}
             />
             {errors.firstName && (
               <p id="firstName-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
@@ -145,6 +152,7 @@ export function CreateUserForm({
               placeholder="Doe"
               {...register('lastName')}
               aria-describedby={errors.lastName ? "lastName-error" : undefined}
+              disabled={isLoading}
             />
             {errors.lastName && (
               <p id="lastName-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
@@ -163,6 +171,7 @@ export function CreateUserForm({
               placeholder="user@example.com"
               {...register('email')}
               aria-describedby={errors.email ? "email-error" : undefined}
+              disabled={isLoading}
             />
             {errors.email && (
               <p id="email-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
@@ -181,6 +190,7 @@ export function CreateUserForm({
               placeholder="Minimum 8 characters"
               {...register('password')}
               aria-describedby={errors.password ? "password-error" : undefined}
+              disabled={isLoading}
             />
             {errors.password && (
               <p id="password-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
@@ -198,6 +208,7 @@ export function CreateUserForm({
               type="date"
               {...register('dateOfBirth')}
               aria-describedby={errors.dateOfBirth ? "dateOfBirth-error" : undefined}
+              disabled={isLoading}
             />
             {errors.dateOfBirth && (
               <p id="dateOfBirth-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
@@ -216,6 +227,7 @@ export function CreateUserForm({
               placeholder="+1234567890"
               {...register('mobileNo')}
               aria-describedby={errors.mobileNo ? "mobileNo-error" : undefined}
+              disabled={isLoading}
             />
             {errors.mobileNo && (
               <p id="mobileNo-error" className="text-sm text-red-600 dark:text-red-400" role="alert">
@@ -231,6 +243,7 @@ export function CreateUserForm({
             <Select
               value={watch('role')}
               onValueChange={(value: 'admin' | 'user') => setValue('role', value)}
+              disabled={isLoading}
             >
               <SelectTrigger
                 aria-describedby={errors.role ? "role-error" : undefined}
@@ -293,10 +306,20 @@ export function CreateUserForm({
                     const data = getValues()
                     await onSubmit(data)
                   }}
+                  onStateChange={(state) => {
+                    // Simple state change handler - no complex setTimeout chains
+                    if (state === 'loading') {
+                      setIsLoading(true)
+                    } else if (state === 'error') {
+                      setIsLoading(false)
+                    }
+                    // Success state is handled by the mutation's onSuccess callback
+                  }}
                   loadingText="Adding users..."
                   successText="Users added!"
                   errorText="Failed to add users"
-                  successDuration={2000}
+                  successDuration={5000}
+                  autoReset={true}
                   className="flex-1 group bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <span className="inline-flex items-center justify-center p-1 rounded-full bg-primary/20 mr-2 transition-colors duration-300 group-hover:bg-primary/30">
@@ -364,10 +387,20 @@ export function CreateUserForm({
                     const data = getValues()
                     await onSubmit(data)
                   }}
+                  onStateChange={(state) => {
+                    // Simple state change handler - no complex setTimeout chains
+                    if (state === 'loading') {
+                      setIsLoading(true)
+                    } else if (state === 'error') {
+                      setIsLoading(false)
+                    }
+                    // Success state is handled by the mutation's onSuccess callback
+                  }}
                   loadingText="Adding users..."
                   successText="Users added!"
                   errorText="Failed to add users"
-                  successDuration={2000}
+                  successDuration={5000}
+                  autoReset={true}
                   className={onCancel ? "flex-1 group bg-primary text-primary-foreground hover:bg-primary/90" : "w-full group bg-primary text-primary-foreground hover:bg-primary/90"}
                 >
                   <span className="inline-flex items-center justify-center p-1 rounded-full bg-primary/20 mr-2 transition-colors duration-300 group-hover:bg-primary/30">

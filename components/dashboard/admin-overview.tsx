@@ -14,7 +14,7 @@ import {
   ProgressiveActivitySkeleton
 } from '@/components/dashboard/skeletons'
 import { ErrorBoundary, LoadingFallback } from '@/components/ui/error-boundary'
-import { ModernAddUserModal } from './modern-add-user-modal'
+import { EnhancedAddUserModal } from './EnhancedAddUserModal'
 import {
   Users,
   Activity,
@@ -112,7 +112,7 @@ function SectionWrapper({
 }
 
 export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) {
-   const [showModernAddUserModal, setShowModernAddUserModal] = useState(false)
+   const [showEnhancedAddUserModal, setShowEnhancedAddUserModal] = useState(false)
 
   const {
     criticalData,
@@ -256,7 +256,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
               variant="outline"
               size="touch"
               className="group bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 "
-              onClick={() => setShowModernAddUserModal(true)}
+              onClick={() => setShowEnhancedAddUserModal(true)}
             >
               <span className="inline-flex items-center justify-center p-1 rounded-full bg-blue-100 mr-2 transition-colors duration-300 group-hover:bg-blue-200">
                 <UserPlus className="h-4 w-4 text-blue-600 transition-colors duration-300 group-hover:text-blue-700" />
@@ -331,10 +331,10 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
         </SectionWrapper>
       )}
 
-      {/* Modern Add User Modal */}
-      <ModernAddUserModal
-        open={showModernAddUserModal}
-        onOpenChange={setShowModernAddUserModal}
+      {/* Enhanced Add User Modal */}
+      <EnhancedAddUserModal
+        open={showEnhancedAddUserModal}
+        onOpenChange={setShowEnhancedAddUserModal}
         onSuccess={() => {
           refetch.all()
         }}

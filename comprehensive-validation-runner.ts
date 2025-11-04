@@ -166,11 +166,12 @@ class PerformanceValidator {
     const score = actualTime <= targetTime ? 100 : Math.max(0, 100 - (actualTime - targetTime) * 2);
     
     return {
+      category: 'performance',
       test: 'Skeleton Display Timing',
       status: actualTime <= targetTime ? 'pass' : 'fail',
       score,
-      metrics: { 
-        actualTime: actualTime.toFixed(1), 
+      metrics: {
+        actualTime: actualTime.toFixed(1),
         targetTime,
         unit: 'ms'
       },
@@ -202,11 +203,12 @@ class PerformanceValidator {
                   Math.max(0, 100 - Math.abs(actualDelay - targetDelay));
     
     return {
+      category: 'performance',
       test: 'Modal Coordination Timing',
       status: actualDelay >= minAcceptable && actualDelay <= maxAcceptable ? 'pass' : 'warning',
       score,
-      metrics: { 
-        actualDelay: actualDelay.toFixed(1), 
+      metrics: {
+        actualDelay: actualDelay.toFixed(1),
         targetDelay,
         acceptableRange: `${minAcceptable}-${maxAcceptable}ms`
       },

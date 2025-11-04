@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useState } from 'react'
 import { trpc } from '@/lib/trpc/client'
@@ -36,11 +36,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { AsyncButton } from '@/components/ui/async-button'
 import { UserOperationModalState } from './user-operation-modal-overlay'
-import { ModernAddUserModal } from './modern-add-user-modal'
+import { EnhancedAddUserModal } from './EnhancedAddUserModal'
 import toast from 'react-hot-toast'
 
 export default function UserManagement() {
-  const [showModernAddUserModal, setShowModernAddUserModal] = useState(false)
+  const [showEnhancedAddUserModal, setShowEnhancedAddUserModal] = useState(false)
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
   const [tempFirstName, setTempFirstName] = useState('')
   const [tempLastName, setTempLastName] = useState('')
@@ -150,9 +150,9 @@ export default function UserManagement() {
           <h2 className="text-xl font-bold tracking-tight">User Management</h2>
           <p className="text-muted-foreground text-sm">Manage user accounts and permissions</p>
         </div>
-        <Button 
-          className="bg-primary text-primary-foreground hover:bg-primary/90" 
-          onClick={() => setShowModernAddUserModal(true)} 
+        <Button
+          className="bg-primary text-primary-foreground hover:bg-primary/90"
+          onClick={() => setShowEnhancedAddUserModal(true)}
           aria-label="Create new user"
         >
           <span className="inline-flex items-center justify-center w-4 h-4 mr-2">
@@ -367,10 +367,10 @@ export default function UserManagement() {
         </CardContent>
       </Card>
 
-      {/* Modern Add User Modal */}
-      <ModernAddUserModal
-        open={showModernAddUserModal}
-        onOpenChange={setShowModernAddUserModal}
+      {/* Enhanced Add User Modal */}
+      <EnhancedAddUserModal
+        open={showEnhancedAddUserModal}
+        onOpenChange={setShowEnhancedAddUserModal}
         onSuccess={() => {
           refetch()
           utils.admin.users.getUsers.invalidate()

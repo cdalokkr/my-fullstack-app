@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useState, useEffect, useCallback } from 'react'
 import { trpc } from '@/lib/trpc/client'
@@ -36,10 +36,10 @@ import { Input } from '@/components/ui/input'
 import { AsyncButton } from '@/components/ui/async-button'
 import { UserOperationModalState } from './user-operation-modal-overlay'
 import { CreateUserForm } from './create-user-form'
-import { 
-  DualLayerLoadingCoordinator, 
-  DatabaseOperationType, 
-  PerformanceMetrics 
+import {
+  DualLayerLoadingCoordinator,
+  DatabaseOperationType,
+  PerformanceMetrics
 } from './dual-layer-loading-coordinator'
 import { LoadingPriority } from '@/components/ui/loading-states'
 import toast from 'react-hot-toast'
@@ -78,20 +78,27 @@ export default function UserManagementEnhancedWithCoordinator() {
       if (error?.data?.code === 'UNAUTHORIZED') return false
       return failureCount < 3
     },
-    onError: (error) => {
+  })
+
+  // Handle query errors and success separately
+  useEffect(() => {
+    if (error) {
       console.error('Failed to fetch users:', error)
       // Dispatch error to coordinator
       window.dispatchEvent(new CustomEvent('user-operation-error', {
         detail: { error: new Error(error.message) }
       }))
-    },
-    onSuccess: () => {
+    }
+  }, [error])
+
+  useEffect(() => {
+    if (usersData) {
       // Dispatch success to coordinator
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('user-operation-complete'))
       }, 300) // Small delay for smooth transition
     }
-  })
+  }, [usersData])
 
   // Enhanced mutations with coordinator integration
   const updateRoleMutation = trpc.admin.users.updateUserRole.useMutation({

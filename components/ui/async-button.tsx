@@ -56,7 +56,6 @@ export function AsyncButton({
   ...props
 }: AsyncButtonProps) {
   const [state, setState] = useState<AsyncState>('idle');
-  const [operationComplete, setOperationComplete] = useState(false);
 
   const defaultIcons = {
     loading: <Loader2 className="mr-2 h-4 w-4 animate-spin" />,
@@ -74,9 +73,7 @@ export function AsyncButton({
       const duration = state === 'success' ? successDuration : errorDuration;
       console.log(`AsyncButton: Auto-reset enabled, will reset from ${state} in ${duration}ms`);
       const timer = setTimeout(() => {
-        console.log(`AsyncButton: Auto-reset timer fired, resetting from ${state} to idle`);
         setState('idle');
-        setOperationComplete(false);
         // Announce state change to screen readers
         const announcement = document.createElement('div');
         announcement.setAttribute('aria-live', 'polite');
@@ -93,29 +90,20 @@ export function AsyncButton({
 
       return () => clearTimeout(timer);
     }
-  }, [state, autoReset, successDuration, errorDuration, onStateChange]);
+  }, [state, autoReset, successDuration, errorDuration]);
 
-  // Handle progressive loading phases - simplified, no longer supported
-  useEffect(() => {
-    if (state !== 'loading') return;
-
-    if (operationComplete) {
-      setState('success');
-    }
-  }, [state, operationComplete]);
 
   const handleClick = async () => {
     if (state === 'loading' || !onClick) return;
 
     console.log('AsyncButton: Starting async operation, setting state to loading');
     setState('loading');
-    setOperationComplete(false);
 
     try {
       console.log('AsyncButton: Executing onClick function');
       await onClick();
-      console.log('AsyncButton: Operation successful, marking complete');
-      setOperationComplete(true);
+      console.log('AsyncButton: Operation successful, setting state to success');
+      setState('success');
     } catch (error) {
       console.error('AsyncButton: Operation failed, setting state to error:', error);
       setState('error');

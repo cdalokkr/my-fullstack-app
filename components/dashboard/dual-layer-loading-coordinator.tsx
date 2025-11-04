@@ -706,7 +706,7 @@ export function DualLayerLoadingCoordinator({
   // State change callback
   useEffect(() => {
     if (onStateChange) {
-      onStateChange(state)
+      onStateChange(state.currentState)
     }
   }, [state.currentState, onStateChange])
 
@@ -771,7 +771,6 @@ export function DualLayerLoadingCoordinator({
         >
           <UserManagementSkeleton
             ariaLabel={skeletonAriaLabel}
-            variant="standard"
             rowCount={8}
             showHeader={true}
             showSearchBar={true}
