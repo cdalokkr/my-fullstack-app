@@ -82,7 +82,7 @@ class CacheSystemValidator {
       await advancedCacheManager.set('test-basic-key', { message: 'Hello World' });
       const retrieved = await advancedCacheManager.get('test-basic-key');
       
-      if (!retrieved || retrieved.message !== 'Hello World') {
+      if (!retrieved || (retrieved as any).message !== 'Hello World') {
         throw new Error('Basic cache set/get failed');
       }
       
@@ -99,14 +99,14 @@ class CacheSystemValidator {
       await advancedCacheManager.set('test-ns-key', { message: 'Namespace Test' }, { namespace: 'test-ns' });
       const fromNs = await advancedCacheManager.get('test-ns-key', 'test-ns');
       
-      if (!fromNs || fromNs.message !== 'Namespace Test') {
+      if (!fromNs || (fromNs as any).message !== 'Namespace Test') {
         throw new Error('Namespace operations test failed');
       }
       
       this.recordTestResult(testName, true, Date.now() - startTime, 'All basic operations working correctly');
       
     } catch (error) {
-      this.recordTestResult(testName, false, Date.now() - startTime, undefined, error.message);
+      this.recordTestResult(testName, false, Date.now() - startTime, undefined, (error as Error).message);
     }
   }
 
@@ -128,7 +128,7 @@ class CacheSystemValidator {
       await advancedCacheManager.set('test-compression-key', largeData);
       const retrieved = await advancedCacheManager.get('test-compression-key');
       
-      if (!retrieved || retrieved.users.length !== 100) {
+      if (!retrieved || (retrieved as any).users.length !== 100) {
         throw new Error('Compression/decompression failed');
       }
       
@@ -141,7 +141,7 @@ class CacheSystemValidator {
       this.recordTestResult(testName, true, Date.now() - startTime, `Compression ratio: ${stats.compressionRatio}`);
       
     } catch (error) {
-      this.recordTestResult(testName, false, Date.now() - startTime, undefined, error.message);
+      this.recordTestResult(testName, false, Date.now() - startTime, undefined, (error as Error).message);
     }
   }
 
@@ -154,7 +154,7 @@ class CacheSystemValidator {
       await advancedCacheManager.optimize();
       
       // Get memory stats
-      const memoryStats = memoryOptimizer.getStats();
+      const memoryStats = MemoryOptimizer.getInstance().getStats();
       
       if (!memoryStats) {
         throw new Error('Memory optimization system not working');
@@ -165,7 +165,7 @@ class CacheSystemValidator {
       this.recordTestResult(testName, true, Date.now() - startTime, `Memory pressure: ${memoryStats.memoryPressure}`);
       
     } catch (error) {
-      this.recordTestResult(testName, false, Date.now() - startTime, undefined, error.message);
+      this.recordTestResult(testName, false, Date.now() - startTime, undefined, (error as Error).message);
     }
   }
 
@@ -191,7 +191,7 @@ class CacheSystemValidator {
       this.recordTestResult(testName, true, Date.now() - startTime, `Consistency score: ${report.overallScore}`);
       
     } catch (error) {
-      this.recordTestResult(testName, false, Date.now() - startTime, undefined, error.message);
+      this.recordTestResult(testName, false, Date.now() - startTime, undefined, (error as Error).message);
     }
   }
 
@@ -215,7 +215,7 @@ class CacheSystemValidator {
       this.recordTestResult(testName, true, Date.now() - startTime, 'Cross-tab synchronization working');
       
     } catch (error) {
-      this.recordTestResult(testName, false, Date.now() - startTime, undefined, error.message);
+      this.recordTestResult(testName, false, Date.now() - startTime, undefined, (error as Error).message);
     }
   }
 
@@ -229,7 +229,7 @@ class CacheSystemValidator {
         await advancedCacheManager.set('', { message: 'Should fail' });
         throw new Error('Empty key validation failed');
       } catch (error) {
-        if (!error.message.includes('non-empty string')) {
+        if (!(error as Error).message.includes('non-empty string')) {
           throw new Error('Error handling not working properly');
         }
       }
@@ -239,7 +239,7 @@ class CacheSystemValidator {
         await advancedCacheManager.set('test-undefined-key', undefined);
         throw new Error('Undefined data validation failed');
       } catch (error) {
-        if (!error.message.includes('undefined')) {
+        if (!(error as Error).message.includes('undefined')) {
           throw new Error('Undefined data handling not working properly');
         }
       }
@@ -247,7 +247,7 @@ class CacheSystemValidator {
       this.recordTestResult(testName, true, Date.now() - startTime, 'Error handling and validation working correctly');
       
     } catch (error) {
-      this.recordTestResult(testName, false, Date.now() - startTime, undefined, error.message);
+      this.recordTestResult(testName, false, Date.now() - startTime, undefined, (error as Error).message);
     }
   }
 
@@ -292,7 +292,7 @@ class CacheSystemValidator {
       this.recordTestResult(testName, true, Date.now() - startTime, `Average operation time: ${avgOperationTime.toFixed(2)}ms`);
       
     } catch (error) {
-      this.recordTestResult(testName, false, Date.now() - startTime, undefined, error.message);
+      this.recordTestResult(testName, false, Date.now() - startTime, undefined, error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -321,7 +321,7 @@ class CacheSystemValidator {
       this.recordTestResult(testName, true, Date.now() - startTime, 'All advanced features working correctly');
       
     } catch (error) {
-      this.recordTestResult(testName, false, Date.now() - startTime, undefined, error.message);
+      this.recordTestResult(testName, false, Date.now() - startTime, undefined, error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -348,7 +348,7 @@ class CacheSystemValidator {
     
     // Get system metrics
     const cacheStats = smartCacheManager.getStats();
-    const memoryStats = memoryOptimizer.getStats();
+    const memoryStats = MemoryOptimizer.getInstance().getStats();
     const consistencyStats = cacheConsistency.getConsistencyScore();
     
     return {

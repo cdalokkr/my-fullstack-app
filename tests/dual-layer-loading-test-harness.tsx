@@ -53,7 +53,7 @@ interface TestExecution {
   startTime?: number
   endTime?: number
   duration?: number
-  result?: 'pass' | 'fail' | 'warn'
+  result?: string
   error?: string
   metrics?: Record<string, any>
 }
@@ -411,7 +411,7 @@ class TestExecutionEngine {
     this.onTestComplete = onTestComplete
   }
 
-  async executeTest(testId: string): Promise<{ status: 'pass' | 'fail' | 'warn', metrics?: any, error?: string }> {
+  async executeTest(testId: string): Promise<{ status: string, metrics?: any, error?: string }> {
     try {
       switch (testId) {
         case 'nav-skeleton-timing':

@@ -1,11 +1,12 @@
 'use client'
 
 import { trpc } from '@/lib/trpc/client'
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { smartCacheManager } from '@/lib/cache/smart-cache-manager'
 import { cacheInvalidation } from '@/lib/cache/cache-invalidation'
 import { backgroundRefresher } from '@/lib/cache/background-refresher'
 import { adaptiveTTLEngine } from '@/lib/cache/adaptive-ttl-engine'
+import { dashboardPrefetcher } from '@/lib/dashboard-prefetch'
 
 interface CriticalData {
   totalUsers: number
@@ -99,6 +100,13 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
     detailed: { hit: false, loading: false }
   })
 
+  // Request deduplication flag for comprehensive queries
+  const comprehensiveQueryInProgress = useRef(false)
+  const prefetchPromiseRef = useRef<Promise<any> | null>(null)
+
+  // State to track prefetch completion for reactivity
+  const [prefetchCompleted, setPrefetchCompleted] = useState(dashboardPrefetcher.hasPrefetchCompleted())
+
   // Create TTL calculation context
   const getTTLContext = useCallback((dataType: string) => ({
     dataType,
@@ -112,157 +120,38 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
     }
   }), [])
 
-  // Cache-aware data fetcher for critical data
-  const fetchCriticalData = useCallback(async () => {
-    const cacheKey = 'critical-dashboard-data'
-    const namespace = 'dashboard'
-    
-    setCacheStatus(prev => ({ ...prev, critical: { ...prev.critical, loading: true } }))
-    
-    try {
-      // Try to get from cache first
-      const cachedData = await smartCacheManager.get<CriticalData>(cacheKey, namespace)
-      if (cachedData) {
-        setCacheStatus(prev => ({ ...prev, critical: { hit: true, loading: false } }))
-        return cachedData
-      }
 
-      // Fetch from API if not in cache
-      const response = await fetch('/api/trpc/admin.getCriticalDashboardData', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch critical data: ${response.status} ${response.statusText}`)
-      }
-
-      const data = await response.json()
-
-      if (!data?.result?.data) {
-        throw new Error('Invalid response structure for critical data')
-      }
-
-      // Store in cache with adaptive TTL
-      await smartCacheManager.set(cacheKey, data.result.data, {
-        namespace,
-        dataType: 'critical-dashboard-data',
-        context: getTTLContext('critical-dashboard-data'),
-        metadata: { tier: 'critical' }
-      })
-
-      setCacheStatus(prev => ({ ...prev, critical: { hit: false, loading: false } }))
-      return data.result.data
-    } catch (error) {
-      setCacheStatus(prev => ({ ...prev, critical: { hit: false, loading: false } }))
-      throw error
-    }
-  }, [getTTLContext])
-
-  // Cache-aware data fetcher for secondary data
-  const fetchSecondaryData = useCallback(async () => {
-    const cacheKey = 'secondary-dashboard-data'
-    const namespace = 'dashboard'
-    
-    setCacheStatus(prev => ({ ...prev, secondary: { ...prev.secondary, loading: true } }))
-    
-    try {
-      // Try to get from cache first
-      const cachedData = await smartCacheManager.get<SecondaryData>(cacheKey, namespace)
-      if (cachedData) {
-        setCacheStatus(prev => ({ ...prev, secondary: { hit: true, loading: false } }))
-        return cachedData
-      }
-
-      // Fetch from API if not in cache
-      const response = await fetch('/api/trpc/admin.getSecondaryDashboardData?input=%7B%22analyticsDays%22%3A7%7D', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch secondary data: ${response.status} ${response.statusText}`)
-      }
-
-      const data = await response.json()
-
-      if (!data?.result?.data) {
-        throw new Error('Invalid response structure for secondary data')
-      }
-
-      // Store in cache with adaptive TTL
-      await smartCacheManager.set(cacheKey, data.result.data, {
-        namespace,
-        dataType: 'secondary-dashboard-data',
-        context: getTTLContext('secondary-dashboard-data'),
-        metadata: { tier: 'secondary' }
-      })
-
-      setCacheStatus(prev => ({ ...prev, secondary: { hit: false, loading: false } }))
-      return data.result.data
-    } catch (error) {
-      setCacheStatus(prev => ({ ...prev, secondary: { hit: false, loading: false } }))
-      throw error
-    }
-  }, [getTTLContext])
-
-  // Cache-aware data fetcher for detailed data
-  const fetchDetailedData = useCallback(async () => {
-    const cacheKey = 'detailed-dashboard-data'
-    const namespace = 'dashboard'
-
-    setCacheStatus(prev => ({ ...prev, detailed: { ...prev.detailed, loading: true } }))
-
-    try {
-      // Try to get from cache first
-      const cachedData = await smartCacheManager.get<DetailedData>(cacheKey, namespace)
-      if (cachedData) {
-        setCacheStatus(prev => ({ ...prev, detailed: { hit: true, loading: false } }))
-        return cachedData
-      }
-
-      // Fetch from API if not in cache
-      const response = await fetch('/api/trpc/admin.getDetailedDashboardData', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch detailed data: ${response.status} ${response.statusText}`)
-      }
-
-      const data = await response.json()
-
-      if (!data?.result?.data) {
-        throw new Error('Invalid response structure for detailed data')
-      }
-
-      // Store in cache with adaptive TTL
-      await smartCacheManager.set(cacheKey, data.result.data, {
-        namespace,
-        dataType: 'detailed-dashboard-data',
-        context: getTTLContext('detailed-dashboard-data'),
-        metadata: { tier: 'detailed' }
-      })
-
-      setCacheStatus(prev => ({ ...prev, detailed: { hit: false, loading: false } }))
-      return data.result.data
-    } catch (error) {
-      setCacheStatus(prev => ({ ...prev, detailed: { hit: false, loading: false } }))
-      throw error
-    }
-  }, [getTTLContext])
-
-  // Set up background refresh for cached data
+  // Set up automatic refresh for cached data using tRPC queries
   useEffect(() => {
-    const setupBackgroundRefresh = () => {
-      // Register background refresh tasks
+    const setupAutomaticRefresh = () => {
+      // Register automatic refresh tasks using tRPC queries
       backgroundRefresher.registerRefreshTask({
         key: 'dashboard:critical-dashboard-data',
         namespace: 'dashboard',
         dataType: 'critical-dashboard-data',
         priority: 'critical',
-        refreshFunction: fetchCriticalData,
+        refreshFunction: async () => {
+          // Use direct fetch for automatic refresh to avoid React Query issues
+          const response = await fetch('/api/trpc/admin.dashboard.getCriticalDashboardData', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          })
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch critical data: ${response.status}`)
+          }
+
+          const data = await response.json()
+          const result = data.result.data
+
+          await smartCacheManager.set('critical-dashboard-data', result, {
+            namespace: 'dashboard',
+            dataType: 'critical-dashboard-data',
+            context: getTTLContext('critical-dashboard-data'),
+            metadata: { tier: 'critical' }
+          })
+          return result
+        },
         maxRetries: 3,
         backoffMultiplier: 2,
         context: getTTLContext('critical-dashboard-data')
@@ -273,7 +162,28 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
         namespace: 'dashboard',
         dataType: 'secondary-dashboard-data',
         priority: 'important',
-        refreshFunction: fetchSecondaryData,
+        refreshFunction: async () => {
+          // Use direct fetch for automatic refresh to avoid React Query issues
+          const response = await fetch('/api/trpc/admin.dashboard.getSecondaryDashboardData?input=%7B%22analyticsDays%22%3A7%7D', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          })
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch secondary data: ${response.status}`)
+          }
+
+          const data = await response.json()
+          const result = data.result.data
+
+          await smartCacheManager.set('secondary-dashboard-data', result, {
+            namespace: 'dashboard',
+            dataType: 'secondary-dashboard-data',
+            context: getTTLContext('secondary-dashboard-data'),
+            metadata: { tier: 'secondary' }
+          })
+          return result
+        },
         maxRetries: 3,
         backoffMultiplier: 2,
         context: getTTLContext('secondary-dashboard-data')
@@ -284,24 +194,45 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
         namespace: 'dashboard',
         dataType: 'detailed-dashboard-data',
         priority: 'normal',
-        refreshFunction: () => fetchDetailedData(),
+        refreshFunction: async () => {
+          // Use direct fetch for automatic refresh to avoid React Query issues
+          const response = await fetch('/api/trpc/admin.dashboard.getDetailedDashboardData', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          })
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch detailed data: ${response.status}`)
+          }
+
+          const data = await response.json()
+          const result = data.result.data
+
+          await smartCacheManager.set('detailed-dashboard-data', result, {
+            namespace: 'dashboard',
+            dataType: 'detailed-dashboard-data',
+            context: getTTLContext('detailed-dashboard-data'),
+            metadata: { tier: 'detailed' }
+          })
+          return result
+        },
         maxRetries: 3,
         backoffMultiplier: 2,
         context: getTTLContext('detailed-dashboard-data')
       })
     }
 
-    setupBackgroundRefresh()
+    setupAutomaticRefresh()
 
     return () => {
-      // Cleanup background refresh tasks on unmount
+      // Cleanup automatic refresh tasks on unmount
       backgroundRefresher.unregisterRefreshTask('dashboard:critical-dashboard-data')
       backgroundRefresher.unregisterRefreshTask('dashboard:secondary-dashboard-data')
       backgroundRefresher.unregisterRefreshTask('dashboard:detailed-dashboard-data')
     }
-  }, [fetchCriticalData, fetchSecondaryData, fetchDetailedData, getTTLContext])
+  }, [getTTLContext])
 
-  // Set up cache invalidation listeners
+  // Set up cache invalidation listeners and prefetch completion tracking
   useEffect(() => {
     const handleInvalidation = (event: { key?: string; namespace?: string }) => {
       if (event.key?.includes('dashboard') || event.namespace === 'dashboard') {
@@ -319,9 +250,21 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
       }
     }
 
+    // Listen for prefetch completion
+    const handlePrefetchComplete = () => {
+      setPrefetchCompleted(true)
+    }
+
     cacheInvalidation.addEventListener('user-action', handleInvalidation)
     cacheInvalidation.addEventListener('data-change', handleInvalidation)
     cacheInvalidation.addEventListener('cross-tab', handleInvalidation)
+
+    // Listen for prefetch completion events
+    dashboardPrefetcher.prefetchDashboardData().then(() => {
+      setPrefetchCompleted(true)
+    }).catch(() => {
+      // Prefetch failed, but that's okay - we'll fall back to queries
+    })
 
     return () => {
       cacheInvalidation.removeEventListener('user-action', handleInvalidation)
@@ -330,39 +273,99 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
     }
   }, [])
 
+  // State to manage cached data retrieval
+  const [cachedComprehensiveData, setCachedComprehensiveData] = useState<any>(null)
+  const [isCacheLoading, setIsCacheLoading] = useState(false)
+
+  // Check if prefetch has completed and coordinate with prefetch timing
+  const shouldSkipComprehensiveQuery = useMemo(() => {
+    if (prefetchCompleted) {
+      // Check if comprehensive data is already cached from prefetch
+      const hasCachedData = smartCacheManager.has('comprehensive-dashboard-data', 'dashboard')
+      console.log('Prefetch completed, checking cache:', hasCachedData)
+      return hasCachedData
+    }
+    return false
+  }, [prefetchCompleted])
+
+  // Retrieve cached comprehensive data when prefetch has completed
+  useEffect(() => {
+    const fetchCachedData = async () => {
+      if (prefetchCompleted && !cachedComprehensiveData && !isCacheLoading) {
+        setIsCacheLoading(true)
+        try {
+          const cached = await smartCacheManager.get('comprehensive-dashboard-data', 'dashboard')
+          console.log('Retrieved cached comprehensive data:', cached)
+          setCachedComprehensiveData(cached)
+        } catch (error) {
+          console.error('Failed to retrieve cached comprehensive data:', error)
+          setCachedComprehensiveData(null)
+        } finally {
+          setIsCacheLoading(false)
+        }
+      }
+    }
+
+    fetchCachedData()
+  }, [prefetchCompleted, cachedComprehensiveData, isCacheLoading])
+
   // Use the new comprehensive endpoint for optimal performance
   const comprehensiveQuery = trpc.admin.dashboard.getComprehensiveDashboardData.useQuery(
     { analyticsDays: 7, activitiesLimit: 10 },
     {
       staleTime: 15 * 1000, // 15 seconds
       refetchOnWindowFocus: false,
+      enabled: !shouldSkipComprehensiveQuery && !comprehensiveQueryInProgress.current,
       queryFn: async () => {
-        // Use the comprehensive endpoint that fetches all data in one call
-        const response = await fetch('/api/trpc/admin.getComprehensiveDashboardData?input=%7B%22analyticsDays%22%3A7%2C%22activitiesLimit%22%3A10%7D', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        })
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch comprehensive dashboard data: ${response.status} ${response.statusText}`)
+        // Wait for prefetch to complete if it's running
+        if (dashboardPrefetcher.isCurrentlyPrefetching()) {
+          try {
+            await dashboardPrefetcher.prefetchDashboardData()
+          } catch (error) {
+            console.warn('Prefetch wait failed:', error)
+          }
         }
 
-        const data = await response.json()
-
-        if (!data?.result?.data) {
-          throw new Error('Invalid response structure for comprehensive dashboard data')
+        if (comprehensiveQueryInProgress.current) {
+          throw new Error('Comprehensive query already in progress')
         }
 
-        // Store in cache with adaptive TTL
-        await smartCacheManager.set('comprehensive-dashboard-data', data.result.data, {
-          namespace: 'dashboard',
-          dataType: 'comprehensive-dashboard-data',
-          context: getTTLContext('comprehensive-dashboard-data'),
-          metadata: { consolidated: true }
-        })
+        comprehensiveQueryInProgress.current = true
 
-        setCacheStatus(prev => ({ ...prev, critical: { hit: false, loading: false } }))
-        return data.result.data
+        try {
+          // Check cache first (including prefetched data)
+          const cachedData = await smartCacheManager.get('comprehensive-dashboard-data', 'dashboard')
+          console.log('Comprehensive query - cached data found:', !!cachedData)
+          if (cachedData) {
+            console.log('Using cached comprehensive data:', cachedData)
+            return cachedData
+          }
+
+          // Use direct fetch for comprehensive query to avoid React Query issues
+          const response = await fetch('/api/trpc/admin.dashboard.getComprehensiveDashboardData?input=%7B%22analyticsDays%22%3A7%2C%22activitiesLimit%22%3A10%7D', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          })
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch comprehensive dashboard data: ${response.status}`)
+          }
+
+          const data = await response.json()
+          const result = data.result.data
+
+          // Store in cache with adaptive TTL
+          await smartCacheManager.set('comprehensive-dashboard-data', result, {
+            namespace: 'dashboard',
+            dataType: 'comprehensive-dashboard-data',
+            context: getTTLContext('comprehensive-dashboard-data'),
+            metadata: { consolidated: true }
+          })
+
+          return result
+        } finally {
+          comprehensiveQueryInProgress.current = false
+        }
       },
     }
   )
@@ -371,8 +374,39 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
   const criticalQuery = trpc.admin.dashboard.getCriticalDashboardData.useQuery(undefined, {
     staleTime: 15 * 1000, // 15 seconds
     refetchOnWindowFocus: false,
-    enabled: !comprehensiveQuery.data, // Only run if comprehensive query hasn't returned data
-    queryFn: fetchCriticalData,
+    enabled: !comprehensiveQuery.data && !shouldSkipComprehensiveQuery, // Only run if comprehensive query hasn't returned data and prefetch not completed
+    queryFn: async () => {
+      // Check cache first for critical data
+      const cachedData = await smartCacheManager.get('critical-dashboard-data', 'dashboard')
+      console.log('Critical query - cached data found:', !!cachedData)
+      if (cachedData) {
+        console.log('Using cached critical data:', cachedData)
+        return cachedData
+      }
+
+      // Use direct fetch for critical query to avoid React Query issues
+      const response = await fetch('/api/trpc/admin.dashboard.getCriticalDashboardData', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch critical dashboard data: ${response.status}`)
+      }
+
+      const data = await response.json()
+      const result = data.result.data
+
+      // Store in cache with adaptive TTL
+      await smartCacheManager.set('critical-dashboard-data', result, {
+        namespace: 'dashboard',
+        dataType: 'critical-dashboard-data',
+        context: getTTLContext('critical-dashboard-data'),
+        metadata: { tier: 'critical' }
+      })
+
+      return result
+    }
   })
 
   const secondaryQuery = trpc.admin.dashboard.getSecondaryDashboardData.useQuery(
@@ -381,7 +415,38 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
       enabled: !!comprehensiveQuery.data || !!criticalQuery.data,
       staleTime: 30 * 1000, // 30 seconds
       refetchOnWindowFocus: false,
-      queryFn: fetchSecondaryData,
+      queryFn: async () => {
+        // Check cache first for secondary data
+        const cachedData = await smartCacheManager.get('secondary-dashboard-data', 'dashboard')
+        console.log('Secondary query - cached data found:', !!cachedData)
+        if (cachedData) {
+          console.log('Using cached secondary data:', cachedData)
+          return cachedData
+        }
+
+        // Use direct fetch for secondary query to avoid React Query issues
+        const response = await fetch('/api/trpc/admin.dashboard.getSecondaryDashboardData?input=%7B%22analyticsDays%22%3A7%7D', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch secondary dashboard data: ${response.status}`)
+        }
+
+        const data = await response.json()
+        const result = data.result.data
+
+        // Store in cache with adaptive TTL
+        await smartCacheManager.set('secondary-dashboard-data', result, {
+          namespace: 'dashboard',
+          dataType: 'secondary-dashboard-data',
+          context: getTTLContext('secondary-dashboard-data'),
+          metadata: { tier: 'secondary' }
+        })
+
+        return result
+      }
     }
   )
 
@@ -389,71 +454,161 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
     enabled: !!comprehensiveQuery.data || !!secondaryQuery.data,
     staleTime: 60 * 1000, // 60 seconds
     refetchOnWindowFocus: false,
-    queryFn: fetchDetailedData,
+    queryFn: async () => {
+      // Check cache first for detailed data
+      const cachedData = await smartCacheManager.get('detailed-dashboard-data', 'dashboard')
+      console.log('Detailed query - cached data found:', !!cachedData)
+      if (cachedData) {
+        console.log('Using cached detailed data:', cachedData)
+        return cachedData
+      }
+
+      // Use direct fetch for detailed query to avoid React Query issues
+      const response = await fetch('/api/trpc/admin.dashboard.getDetailedDashboardData', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch detailed dashboard data: ${response.status}`)
+      }
+
+      const data = await response.json()
+      const result = data.result.data
+
+      // Store in cache with adaptive TTL
+      await smartCacheManager.set('detailed-dashboard-data', result, {
+        namespace: 'dashboard',
+        dataType: 'detailed-dashboard-data',
+        context: getTTLContext('detailed-dashboard-data'),
+        metadata: { tier: 'detailed' }
+      })
+
+      return result
+    }
   })
 
-  // Enhanced refetch functions with cache invalidation
+  // Debounced refetch functions to prevent rapid successive calls
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+
+  const debouncedRefetch = useCallback((refetchFn: () => void, delay: number = 500) => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
+    debounceRef.current = setTimeout(() => {
+      refetchFn()
+      debounceRef.current = null
+    }, delay)
+  }, [])
+
+  // Enhanced refetch functions with cache invalidation and debouncing
   const refetchCritical = useCallback(() => {
-    smartCacheManager.delete('critical-dashboard-data', 'dashboard')
-    criticalQuery.refetch()
-  }, [criticalQuery])
+    debouncedRefetch(() => {
+      smartCacheManager.delete('critical-dashboard-data', 'dashboard')
+      criticalQuery.refetch()
+    })
+  }, [criticalQuery, debouncedRefetch])
 
   const refetchSecondary = useCallback(() => {
     if (comprehensiveQuery.data || criticalQuery.data) {
-      smartCacheManager.delete('secondary-dashboard-data', 'dashboard')
-      secondaryQuery.refetch()
+      debouncedRefetch(() => {
+        smartCacheManager.delete('secondary-dashboard-data', 'dashboard')
+        secondaryQuery.refetch()
+      })
     }
-  }, [comprehensiveQuery.data, criticalQuery.data, secondaryQuery])
+  }, [comprehensiveQuery.data, criticalQuery.data, secondaryQuery, debouncedRefetch])
 
   const refetchDetailed = useCallback(() => {
     if (comprehensiveQuery.data || secondaryQuery.data) {
-      smartCacheManager.delete('detailed-dashboard-data', 'dashboard')
-      detailedQuery.refetch()
+      debouncedRefetch(() => {
+        smartCacheManager.delete('detailed-dashboard-data', 'dashboard')
+        detailedQuery.refetch()
+      })
     }
-  }, [comprehensiveQuery.data, secondaryQuery.data, detailedQuery])
+  }, [comprehensiveQuery.data, secondaryQuery.data, detailedQuery, debouncedRefetch])
 
   const refetchComprehensive = useCallback(() => {
-    smartCacheManager.delete('comprehensive-dashboard-data', 'dashboard')
-    comprehensiveQuery.refetch()
-  }, [comprehensiveQuery])
+    debouncedRefetch(() => {
+      smartCacheManager.delete('comprehensive-dashboard-data', 'dashboard')
+      comprehensiveQuery.refetch()
+    })
+  }, [comprehensiveQuery, debouncedRefetch])
 
   const refetchAll = useCallback(() => {
-    smartCacheManager.invalidateNamespace('dashboard')
-    refetchComprehensive()
-    refetchCritical()
-  }, [refetchCritical, refetchComprehensive])
+    debouncedRefetch(() => {
+      smartCacheManager.invalidateNamespace('dashboard')
+      refetchComprehensive()
+      refetchCritical()
+    })
+  }, [refetchCritical, refetchComprehensive, debouncedRefetch])
 
   // Memoize the state to prevent unnecessary re-renders
-  const state = useMemo(() => ({
-    criticalData: comprehensiveQuery.data?.critical || criticalQuery.data || null,
-    secondaryData: comprehensiveQuery.data?.secondary || secondaryQuery.data || null,
-    detailedData: comprehensiveQuery.data?.detailed || detailedQuery.data || null,
-    isLoading: {
-      critical: comprehensiveQuery.isLoading || criticalQuery.isLoading || cacheStatus.critical.loading,
-      secondary: comprehensiveQuery.isLoading || secondaryQuery.isLoading || cacheStatus.secondary.loading,
-      detailed: comprehensiveQuery.isLoading || detailedQuery.isLoading || cacheStatus.detailed.loading,
-    },
-    isError: {
-      critical: comprehensiveQuery.isError && criticalQuery.isError,
-      secondary: comprehensiveQuery.isError && secondaryQuery.isError,
-      detailed: comprehensiveQuery.isError && detailedQuery.isError,
-    },
-    errors: {
-      critical: comprehensiveQuery.error || criticalQuery.error,
-      secondary: comprehensiveQuery.error || secondaryQuery.error,
-      detailed: comprehensiveQuery.error || detailedQuery.error,
-    },
-    refetch: {
-      critical: refetchCritical,
-      secondary: refetchSecondary,
-      detailed: refetchDetailed,
-      all: refetchAll,
-      comprehensive: comprehensiveQuery.refetch,
-    },
-    cacheStatus,
-    // Include comprehensive data for components that can use it
-    comprehensiveData: comprehensiveQuery.data,
-  }), [
+  const state = useMemo(() => {
+    console.log('Building dashboard state:', {
+      comprehensiveData: !!comprehensiveQuery.data,
+      criticalData: !!criticalQuery.data,
+      secondaryData: !!secondaryQuery.data,
+      detailedData: !!detailedQuery.data,
+      shouldSkipQuery: shouldSkipComprehensiveQuery,
+      cachedComprehensiveData: !!cachedComprehensiveData,
+      comprehensiveDataContent: comprehensiveQuery.data ? {
+        critical: (comprehensiveQuery.data as any)?.critical,
+        secondary: (comprehensiveQuery.data as any)?.secondary,
+        detailed: (comprehensiveQuery.data as any)?.detailed
+      } : null,
+      cachedComprehensiveDataContent: cachedComprehensiveData ? {
+        critical: (cachedComprehensiveData as any)?.critical,
+        secondary: (cachedComprehensiveData as any)?.secondary,
+        detailed: (cachedComprehensiveData as any)?.detailed
+      } : null,
+      criticalQueryData: criticalQuery.data,
+      secondaryQueryData: secondaryQuery.data,
+      detailedQueryData: detailedQuery.data
+    })
+
+    // Use cached data from prefetch if available, otherwise fall back to query data
+    const finalCriticalData = (cachedComprehensiveData as any)?.critical || (comprehensiveQuery.data as any)?.critical || criticalQuery.data || null
+    const finalSecondaryData = (cachedComprehensiveData as any)?.secondary || (comprehensiveQuery.data as any)?.secondary || secondaryQuery.data || null
+    const finalDetailedData = (cachedComprehensiveData as any)?.detailed || (comprehensiveQuery.data as any)?.detailed || detailedQuery.data || null
+
+    console.log('Final data being returned:', {
+      criticalData: finalCriticalData,
+      secondaryData: finalSecondaryData,
+      detailedData: finalDetailedData,
+      source: cachedComprehensiveData ? 'cache' : comprehensiveQuery.data ? 'query' : 'fallback'
+    })
+
+    return {
+      criticalData: finalCriticalData,
+      secondaryData: finalSecondaryData,
+      detailedData: finalDetailedData,
+      isLoading: {
+        critical: comprehensiveQuery.isLoading || criticalQuery.isLoading || cacheStatus.critical.loading,
+        secondary: comprehensiveQuery.isLoading || secondaryQuery.isLoading || cacheStatus.secondary.loading,
+        detailed: comprehensiveQuery.isLoading || detailedQuery.isLoading || cacheStatus.detailed.loading,
+      },
+      isError: {
+        critical: comprehensiveQuery.isError && criticalQuery.isError,
+        secondary: comprehensiveQuery.isError && secondaryQuery.isError,
+        detailed: comprehensiveQuery.isError && detailedQuery.isError,
+      },
+      errors: {
+        critical: comprehensiveQuery.error || criticalQuery.error,
+        secondary: comprehensiveQuery.error || secondaryQuery.error,
+        detailed: comprehensiveQuery.error || detailedQuery.error,
+      },
+      refetch: {
+        critical: refetchCritical,
+        secondary: refetchSecondary,
+        detailed: refetchDetailed,
+        all: refetchAll,
+        comprehensive: comprehensiveQuery.refetch,
+      },
+      cacheStatus,
+      // Include comprehensive data for components that can use it
+      comprehensiveData: cachedComprehensiveData || comprehensiveQuery.data,
+    }
+  }, [
     comprehensiveQuery.data,
     comprehensiveQuery.isLoading,
     comprehensiveQuery.isError,
@@ -476,6 +631,8 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
     refetchDetailed,
     refetchAll,
     cacheStatus,
+    cachedComprehensiveData,
+    isCacheLoading
   ])
 
   return state

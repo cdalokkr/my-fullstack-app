@@ -403,8 +403,8 @@ class AdvancedCacheManager {
       } catch (fallbackError) {
         console.error('Fallback cache operation also failed:', fallbackError);
         // In production, just log and continue - don't throw
-        if (process.env.NODE_ENV === 'development') {
-          throw new Error(`Cache operation failed: ${error.message}`);
+        if (process.env.NODE_ENV !== 'production') {
+          throw new Error(`Cache operation failed: ${(error as Error).message}`);
         }
       }
     } finally {

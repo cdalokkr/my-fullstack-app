@@ -98,7 +98,7 @@ const RealWorldTestComponent: React.FC<{
 }> = ({ testId, onResult }) => {
   const [isRunning, setIsRunning] = useState(false)
   const [currentPhase, setCurrentPhase] = useState<string>('idle')
-  const performanceRef = useRef<PerformanceObserver>()
+  const performanceRef = useRef<PerformanceObserver | null>(null)
   const metricsRef = useRef<Record<string, number>>({})
 
   const runRealWorldTest = useCallback(async () => {
@@ -659,6 +659,7 @@ export const UserExperienceValidation: React.FC = () => {
       name: 'Accessibility Validation',
       description: 'Test WCAG compliance and accessibility features',
       category: 'accessibility',
+      critical: false,
       tests: [
         {
           id: 'accessibility-compliance',
@@ -673,6 +674,7 @@ export const UserExperienceValidation: React.FC = () => {
       name: 'User Experience Validation',
       description: 'Test user experience and responsive design',
       category: 'ux',
+      critical: false,
       tests: [
         {
           id: 'mobile-responsiveness',
@@ -687,6 +689,7 @@ export const UserExperienceValidation: React.FC = () => {
       name: 'Reliability Validation',
       description: 'Test error handling and recovery mechanisms',
       category: 'reliability',
+      critical: false,
       tests: [
         {
           id: 'error-handling',

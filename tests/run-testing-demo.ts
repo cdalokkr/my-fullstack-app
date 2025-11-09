@@ -7,7 +7,7 @@
  * for the dual-layer loading system and view results.
  */
 
-import { DualLayerTestExecutor, generateDocumentation } from './tests/comprehensive-test-executor.js'
+import { DualLayerTestExecutor, generateDocumentation } from './comprehensive-test-executor'
 
 async function runDemo() {
   console.log('🚀 Dual-Layer Loading System - Testing Demo')
@@ -49,7 +49,7 @@ async function runDemo() {
     
     if (results.summary.criticalIssues.length > 0) {
       console.log('❌ Critical Issues:')
-      results.summary.criticalIssues.forEach(issue => {
+      results.summary.criticalIssues.forEach((issue: any) => {
         console.log(`   - ${issue.name}: ${issue.issue}`)
       })
       console.log()
@@ -57,7 +57,7 @@ async function runDemo() {
     
     if (results.summary.areasForImprovement.length > 0) {
       console.log('⚠️  Areas for Improvement:')
-      results.summary.areasForImprovement.forEach(area => {
+      results.summary.areasForImprovement.forEach((area: any) => {
         console.log(`   - ${area.name}: ${area.improvement}`)
       })
       console.log()
@@ -96,7 +96,7 @@ async function runDemo() {
     return results
     
   } catch (error) {
-    console.error('❌ Testing failed:', error.message)
+    console.error('❌ Testing failed:', error instanceof Error ? error.message : String(error))
     process.exit(1)
   }
 }

@@ -268,6 +268,10 @@
   }
 }
 
+button:active {
+  transform: scale(0.97);
+}
+
 /* Mobile-specific media queries */
 @media (max-width: 640px) {
   /* Improve scroll performance on mobile */

@@ -183,4 +183,27 @@ export const adminUsersRouter = router({
 
       return profileData
     }),
+
+  checkEmailAvailability: adminProcedure
+    .input(
+      z.object({
+        email: z.string().email('Invalid email address'),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', input.email)
+        .single()
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+        throw new Error(`Database error: ${error.message}`)
+      }
+
+      return {
+        available: !data,
+        email: input.email
+      }
+    }),
 })

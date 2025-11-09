@@ -202,7 +202,7 @@ class PerformanceValidator {
     const score = actualDelay >= minAcceptable && actualDelay <= maxAcceptable ? 100 : 
                   Math.max(0, 100 - Math.abs(actualDelay - targetDelay));
     
-    return {
+    category: 'performance', // Added missing category
       category: 'performance',
       test: 'Modal Coordination Timing',
       status: actualDelay >= minAcceptable && actualDelay <= maxAcceptable ? 'pass' : 'warning',
@@ -237,12 +237,13 @@ class PerformanceValidator {
     
     const score = actualTime <= targetTime ? 100 : Math.max(0, 100 - (actualTime - targetTime) / 10);
     
-    return {
+    category: 'performance', // Added missing category
+      category: 'performance',
       test: 'Total Loading Sequence',
       status: actualTime <= targetTime ? 'pass' : 'fail',
       score,
-      metrics: { 
-        actualTime: actualTime.toFixed(1), 
+      metrics: {
+        actualTime: actualTime.toFixed(1),
         targetTime,
         unit: 'ms'
       },
@@ -271,12 +272,13 @@ class PerformanceValidator {
     const score = actualFPS >= minFPS ? Math.min(100, (actualFPS / targetFPS) * 100) : 
                   Math.max(0, (actualFPS / minFPS) * 100);
     
-    return {
+    category: 'performance', // Added missing category
+      category: 'performance',
       test: 'Animation Smoothness',
       status: actualFPS >= minFPS ? 'pass' : 'fail',
       score,
-      metrics: { 
-        actualFPS: actualFPS.toFixed(1), 
+      metrics: {
+        actualFPS: actualFPS.toFixed(1),
         targetFPS,
         minFPS
       },
@@ -305,12 +307,13 @@ class PerformanceValidator {
                   Math.max(80, 100 - actualOverhead * 2) : 
                   Math.max(0, 100 - actualOverhead * 10);
     
-    return {
+    category: 'performance', // Added missing category
+      category: 'performance',
       test: 'Memory Usage Optimization',
       status: actualOverhead <= maxOverhead ? 'pass' : 'warning',
       score,
-      metrics: { 
-        actualOverhead: actualOverhead.toFixed(1), 
+      metrics: {
+        actualOverhead: actualOverhead.toFixed(1),
         maxOverhead,
         unit: '%'
       },
@@ -338,7 +341,7 @@ class PerformanceValidator {
     const score = hasGPUAcceleration && accelerationScore >= 80 ? 100 : 
                   hasGPUAcceleration ? accelerationScore : 0;
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Hardware Acceleration',
       status: hasGPUAcceleration && accelerationScore >= 80 ? 'pass' : 'warning',
       score,
@@ -377,7 +380,7 @@ class PerformanceValidator {
                   Math.min(100, reduction * 2.5) : 
                   reduction >= minReduction ? 75 : Math.max(0, reduction * 2);
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Bundle Size Optimization',
       status: reduction >= minReduction ? 'pass' : 'fail',
       score,
@@ -483,7 +486,7 @@ class AccessibilityValidator {
     
     const score = Math.max(80, complianceRate);
     
-    return {
+    category: 'performance', // Added missing category
       test: 'WCAG 2.1 AA Compliance',
       status: complianceRate >= 95 ? 'pass' : 'warning',
       score,
@@ -510,7 +513,7 @@ class AccessibilityValidator {
     
     const score = compatibilityScore;
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Screen Reader Compatibility',
       status: compatibilityScore >= 90 ? 'pass' : 'warning',
       score,
@@ -537,7 +540,7 @@ class AccessibilityValidator {
     
     const score = navigationScore;
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Keyboard Navigation',
       status: navigationScore >= 95 ? 'pass' : 'warning',
       score,
@@ -564,7 +567,7 @@ class AccessibilityValidator {
     
     const score = semanticScore;
     
-    return {
+    category: 'performance', // Added missing category
       test: 'ARIA Labels and Semantics',
       status: semanticScore >= 90 ? 'pass' : 'warning',
       score,
@@ -591,7 +594,7 @@ class AccessibilityValidator {
     
     const score = focusScore;
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Focus Management',
       status: focusScore >= 95 ? 'pass' : 'warning',
       score,
@@ -618,7 +621,7 @@ class AccessibilityValidator {
     
     const score = Math.min(100, (contrastRatio / 7) * 100); // Normalize to 7:1 maximum
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Color Contrast',
       status: contrastRatio >= 4.5 ? 'pass' : 'fail',
       score,
@@ -711,7 +714,7 @@ class UXValidator {
       issues.push(`Loading feedback clarity score ${feedbackScore.toFixed(1)}% below target 90%`);
     }
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Loading Feedback Clarity',
       status: feedbackScore >= 90 ? 'pass' : 'warning',
       score: feedbackScore,
@@ -730,7 +733,7 @@ class UXValidator {
   private async testTransitionSmoothness(): Promise<ValidationResult> {
     const transitionScore = Math.random() * 10 + 90; // 90-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Transition Smoothness',
       status: transitionScore >= 95 ? 'pass' : 'warning',
       score: transitionScore,
@@ -749,7 +752,7 @@ class UXValidator {
   private async testErrorStates(): Promise<ValidationResult> {
     const errorScore = Math.random() * 20 + 80; // 80-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Error State Accessibility',
       status: errorScore >= 85 ? 'pass' : 'warning',
       score: errorScore,
@@ -768,7 +771,7 @@ class UXValidator {
   private async testMobileResponsiveness(): Promise<ValidationResult> {
     const mobileScore = Math.random() * 10 + 90; // 90-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Mobile Responsiveness',
       status: mobileScore >= 95 ? 'pass' : 'warning',
       score: mobileScore,
@@ -787,7 +790,7 @@ class UXValidator {
   private async testLoadingPersistence(): Promise<ValidationResult> {
     const persistenceScore = Math.random() * 15 + 85; // 85-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Loading State Persistence',
       status: persistenceScore >= 90 ? 'pass' : 'warning',
       score: persistenceScore,
@@ -875,7 +878,7 @@ class IntegrationValidator {
   private async testComponentIntegration(): Promise<ValidationResult> {
     const integrationScore = Math.random() * 10 + 90; // 90-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Component Integration',
       status: integrationScore >= 95 ? 'pass' : 'warning',
       score: integrationScore,
@@ -894,7 +897,7 @@ class IntegrationValidator {
   private async testDatabaseIntegration(): Promise<ValidationResult> {
     const dbScore = Math.random() * 15 + 85; // 85-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Database Integration',
       status: dbScore >= 90 ? 'pass' : 'warning',
       score: dbScore,
@@ -913,7 +916,7 @@ class IntegrationValidator {
   private async testNavigationIntegration(): Promise<ValidationResult> {
     const navScore = Math.random() * 10 + 90; // 90-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Navigation Integration',
       status: navScore >= 95 ? 'pass' : 'warning',
       score: navScore,
@@ -932,7 +935,7 @@ class IntegrationValidator {
   private async testDashboardIntegration(): Promise<ValidationResult> {
     const dashboardScore = Math.random() * 15 + 85; // 85-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Admin Dashboard Integration',
       status: dashboardScore >= 90 ? 'pass' : 'warning',
       score: dashboardScore,
@@ -951,7 +954,7 @@ class IntegrationValidator {
   private async testSecurityIntegration(): Promise<ValidationResult> {
     const securityScore = Math.random() * 10 + 90; // 90-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Role-based Security',
       status: securityScore >= 95 ? 'pass' : 'warning',
       score: securityScore,
@@ -1039,7 +1042,7 @@ class ProductionValidator {
   private async testCodeQuality(): Promise<ValidationResult> {
     const qualityScore = Math.random() * 10 + 90; // 90-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Code Quality',
       status: qualityScore >= 95 ? 'pass' : 'warning',
       score: qualityScore,
@@ -1058,7 +1061,7 @@ class ProductionValidator {
   private async testErrorHandling(): Promise<ValidationResult> {
     const errorHandlingScore = Math.random() * 15 + 85; // 85-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Error Handling',
       status: errorHandlingScore >= 90 ? 'pass' : 'warning',
       score: errorHandlingScore,
@@ -1077,7 +1080,7 @@ class ProductionValidator {
   private async testSecurityValidation(): Promise<ValidationResult> {
     const securityScore = Math.random() * 10 + 90; // 90-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Security Validation',
       status: securityScore >= 95 ? 'pass' : 'warning',
       score: securityScore,
@@ -1096,7 +1099,7 @@ class ProductionValidator {
   private async testSEOOptimization(): Promise<ValidationResult> {
     const seoScore = Math.random() * 20 + 80; // 80-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'SEO Optimization',
       status: seoScore >= 85 ? 'pass' : 'warning',
       score: seoScore,
@@ -1115,7 +1118,7 @@ class ProductionValidator {
   private async testBundleOptimization(): Promise<ValidationResult> {
     const bundleScore = Math.random() * 15 + 85; // 85-100%
     
-    return {
+    category: 'performance', // Added missing category
       test: 'Bundle Optimization',
       status: bundleScore >= 90 ? 'pass' : 'warning',
       score: bundleScore,

@@ -1,6 +1,5 @@
 // Updated validation script for the final dialog accessibility fix
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
 
 console.log('🔍 Validating Final Dialog Accessibility Fix...\n');
 

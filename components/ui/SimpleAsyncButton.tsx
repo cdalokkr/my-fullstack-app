@@ -46,13 +46,17 @@ export function SimpleAsyncButton({
 
   useEffect(() => {
     if (autoReset && state === 'success') {
-      const timer = setTimeout(() => {
-        setState('idle');
-      }, successDuration);
-
-      return () => clearTimeout(timer);
+      // Commented out auto-reset to prevent user confusion during redirections
+      // Success state now persists until user manually takes action
+      // const timer = setTimeout(() => {
+      //   setState('idle');
+      // }, successDuration);
+      // return () => clearTimeout(timer);
     }
   }, [state, autoReset, successDuration]);
+  
+  // Note: Auto-reset disabled for success state to prevent user confusion during redirections
+  // Users can still manually interact after success, error states still reset automatically
 
   const handleClick = async () => {
     if (state === 'loading' || !onClick || disabled) return;

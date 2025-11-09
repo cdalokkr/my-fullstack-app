@@ -17,7 +17,7 @@ export function StatusBar() {
   // Get the most recent timestamp from available data
   const lastUpdated = criticalData?.metadata?.fetchedAt
     ? new Date(criticalData.metadata.fetchedAt).getTime()
-    : Date.now()
+    : 0
 
   const ttl = criticalData?.metadata?.cacheExpiry || 15000
 

@@ -33,7 +33,7 @@ import {
 import { Edit, Trash2, UserPlus, X, Save, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { AsyncButton } from '@/components/ui/async-button'
+import AsyncButton from '@/components/ui/async-button'
 import { UserOperationModalState } from './user-operation-modal-overlay'
 import { CreateUserForm } from './create-user-form'
 import {

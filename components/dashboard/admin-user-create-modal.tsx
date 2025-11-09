@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createUserSchema, type CreateUserInput } from '@/lib/validations/auth'
-import { AsyncButton } from '@/components/ui/async-button'
+import AsyncButton from '@/components/ui/async-button'
 import {
   Dialog,
   DialogContent,

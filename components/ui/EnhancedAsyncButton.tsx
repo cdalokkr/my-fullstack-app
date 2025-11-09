@@ -116,13 +116,14 @@ export function EnhancedAsyncButton({
     };
   }, [state, timeoutDuration, callbacks]);
 
-  // Enhanced auto-reset with error handling
+  // Enhanced auto-reset with error handling (success state no longer auto-resets)
   useEffect(() => {
     handleStateChange(state);
 
-    if (autoReset && (state === 'success' || (state === 'error' && showErrorBriefly))) {
-      const duration = state === 'success' ? successDuration : errorDuration;
-      console.log(`Enhanced AsyncButton: Auto-reset enabled, will reset from ${state} in ${duration}ms`);
+    // Only auto-reset error states, not success states to prevent user confusion during redirections
+    if (autoReset && (state === 'error' && showErrorBriefly)) {
+      const duration = errorDuration;
+      console.log(`Enhanced AsyncButton: Auto-reset enabled for error state, will reset in ${duration}ms`);
       
       retryTimeoutRef.current = setTimeout(() => {
         setState('idle');

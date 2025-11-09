@@ -31,26 +31,6 @@ function DashboardContent({
     onLoadingChange(isLoading)
   }, [isLoading, onLoadingChange])
 
-  if (isLoading) {
-    return (
-      <div className="w-full h-full overflow-auto">
-        <div className="min-h-full p-4 md:p-6 lg:p-8 space-y-6">
-          <div className="bg-background/50 backdrop-blur-sm rounded-lg border border-border/20 shadow-sm p-6 md:p-8 space-y-6">
-            <div className="flex items-center justify-between space-y-2">
-              <Skeleton className="h-8 w-48" />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full" />
-              ))}
-            </div>
-            <Skeleton className="h-64 w-full" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   if (!profile) {
     return (
       <div className="w-full h-full overflow-auto">
@@ -232,19 +212,46 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const currentRole = storedProfile?.role || profile?.role;
   const currentUser = storedProfile || profile || null;
   
-  // Show loading state while role is being determined
+  // Show loading dialog while role is being determined (but don't block the UI)
   if (!currentRole && (pathname === '/admin' || pathname === '/user')) {
     return (
-      <Dialog open={true}>
-        <DialogContent showCloseButton={false} className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Loading your profile...</DialogTitle>
-            <DialogDescription>
-              Please wait while we prepare your dashboard.
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+      <>
+        <Dialog
+          open={showDialog}
+        >
+          <DialogContent showCloseButton={false} className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Loading your profile...</DialogTitle>
+              <DialogDescription>
+                Please wait while we prepare your dashboard.
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+        <SidebarProvider>
+          <AppSidebar
+            role="user"
+            tenants={tenants}
+            defaultTenant={defaultTenant}
+            onTenantSwitch={handleTenantSwitch}
+            user={null}
+          />
+          <SidebarInset className="flex flex-col min-h-screen">
+            <TopBar user={null} />
+            <div className="flex-1 w-full pt-6 pb-4 px-4">
+              <div className="min-h-full p-4 md:p-6 lg:p-8 space-y-6 scroll-smooth-touch mobile-optimized">
+                <div className="bg-background/50 backdrop-blur-sm rounded-lg border border-border/20 shadow-sm p-6 md:p-8">
+                  <div className="text-center">
+                    <h2 className="text-xl font-bold mb-4">Loading your dashboard...</h2>
+                    <p className="text-muted-foreground">Please wait while we prepare your content.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <StatusBar />
+          </SidebarInset>
+        </SidebarProvider>
+      </>
     )
   }
 

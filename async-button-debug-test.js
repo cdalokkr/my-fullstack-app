@@ -1,8 +1,6 @@
 // Simple test to verify ManualAsyncButton behavior
 // Run with: node async-button-debug-test.js
 
-const React = require('react');
-
 // Mock the ManualAsyncButton component behavior
 console.log('=== ASYNC BUTTON DEBUG TEST ===');
 

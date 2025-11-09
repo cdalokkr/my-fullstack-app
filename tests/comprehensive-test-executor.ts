@@ -554,9 +554,10 @@ export class DualLayerTestExecutor {
     }
 
     // General recommendations
-    if (this.generateTestSummary().overview.passRate >= 90) {
+    const passRate = parseFloat(this.generateTestSummary().overview.passRate)
+    if (passRate >= 90) {
       recommendations.push('Excellent performance! Continue monitoring and maintain current standards')
-    } else if (this.generateTestSummary().overview.passRate >= 80) {
+    } else if (passRate >= 80) {
       recommendations.push('Good overall performance. Address warnings to achieve excellence')
     } else {
       recommendations.push('Performance needs improvement. Focus on critical failures and memory optimization')
@@ -609,19 +610,19 @@ export const generateDocumentation = (results: any) => {
 
 ## Critical Issues
 
-${results.summary.criticalIssues.length > 0 ? results.summary.criticalIssues.map(issue => 
+${results.summary.criticalIssues.length > 0 ? results.summary.criticalIssues.map((issue: any) =>
 `- **${issue.name}**: ${issue.issue}`
 ).join('\n') : 'No critical issues identified'}
 
 ## Areas for Improvement
 
-${results.summary.areasForImprovement.map(area => 
+${results.summary.areasForImprovement.map((area: any) =>
 `- **${area.name}**: ${area.improvement}`
 ).join('\n')}
 
 ## Recommendations
 
-${results.recommendations.map(rec => `- ${rec}`).join('\n')}
+${results.recommendations.map((rec: any) => `- ${rec}`).join('\n')}
 
 ## Detailed Test Results
 

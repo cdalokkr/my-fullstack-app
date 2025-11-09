@@ -56,6 +56,8 @@ export interface ModalSection {
   collapsible?: boolean;
   defaultOpen?: boolean;
   children?: React.ReactNode;
+  className?: string;
+  hoverClassName?: string;
 }
 
 export interface EnhancedModalProps {
@@ -105,6 +107,8 @@ export interface EnhancedModalProps {
   buttonsInContent?: boolean;
   /** Whether to show the default dialog close button (radix default) */
   showDefaultCloseButton?: boolean;
+  /** Additional props to pass to the submit button */
+  submitButtonProps?: Partial<import('./EnhancedAsyncButton').EnhancedAsyncButtonProps>;
 }
 
 export function EnhancedModal({
@@ -131,6 +135,7 @@ export function EnhancedModal({
   submitButtonContent,
   buttonsInContent = false,
   showDefaultCloseButton = false,
+  submitButtonProps = {},
 }: EnhancedModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -337,16 +342,41 @@ export function EnhancedModal({
             <div className="space-y-4">
               {sections.map((section) => {
                 const isOpen = openSections.has(section.id);
+                
+                // Dynamic corner classes based on section state
+                const getCornerClasses = () => {
+                  if (isOpen && section.collapsible) {
+                    // Expanded: rounded top corners, sharp bottom corners
+                    return 'rounded-t-lg rounded-b-none';
+                  } else {
+                    // Collapsed: all corners rounded
+                    return 'rounded-lg';
+                  }
+                };
+                
                 return (
                   <div
                     key={section.id}
-                    className="border rounded-lg bg-background/50"
+                    className={cn(
+                      'border bg-background/50 backdrop-blur-sm',
+                      getCornerClasses(),
+                      // Apply section-specific styling
+                      section.className?.includes('border-') ? '' : 'border-border'
+                    )}
                   >
                     <button
                       onClick={() => section.collapsible && toggleSection(section.id)}
                       className={cn(
-                        'w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors',
-                        section.collapsible && 'cursor-pointer'
+                        'w-full flex items-center justify-between p-4 text-left transition-all duration-300',
+                        section.collapsible && 'cursor-pointer',
+                        section.className,
+                        section.hoverClassName || 'hover:bg-muted/50',
+                        // Ensure button has same corner styling
+                        getCornerClasses(),
+                        // Top corners should match container
+                        isOpen && section.collapsible ? 'rounded-t-lg' : 'rounded-lg',
+                        // Remove bottom rounding when expanded to avoid double rounding
+                        isOpen && section.collapsible ? 'rounded-b-none' : ''
                       )}
                     >
                       <div className="flex items-center gap-3">
@@ -356,9 +386,9 @@ export function EnhancedModal({
                           </div>
                         )}
                         <div>
-                          <h3 className="font-semibold text-sm">{section.title}</h3>
+                          <h3 className="font-semibold text-sm text-foreground">{section.title}</h3>
                           {section.description && (
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-sm text-muted-foreground dark:text-muted-foreground/80 mt-1">
                               {section.description}
                             </p>
                           )}
@@ -375,7 +405,13 @@ export function EnhancedModal({
                       )}
                     </button>
                     {(section.collapsible ? isOpen : true) && section.children && (
-                      <div className="border-t p-4 pt-0">
+                      <div className={cn(
+                        'p-4 pt-0',
+                        // Apply section border color to the content area border
+                        section.className?.includes('border-')
+                          ? `border-t ${section.className.match(/border-[^\\s]+/)?.[0] || 'border-border'}`
+                          : 'border-t border-border'
+                      )}>
                         <div className="pt-4">
                           {section.children}
                         </div>
@@ -423,6 +459,7 @@ export function EnhancedModal({
                     stateClasses={{
                       success: 'animate-pulse',
                     }}
+                    {...submitButtonProps}
                   >
                     {submitButtonContent || submitText}
                   </EnhancedAsyncButton>
@@ -466,6 +503,7 @@ export function EnhancedModal({
                   stateClasses={{
                     success: 'animate-pulse',
                   }}
+                  {...submitButtonProps}
                 >
                   {submitButtonContent || submitText}
                 </EnhancedAsyncButton>

@@ -36,7 +36,7 @@ export function CacheStatusIndicator({
     totalEntries: 0,
     totalSize: 0,
     isOnline: true,
-    lastRefresh: Date.now(),
+    lastRefresh: 0,
     backgroundRefreshActive: false
   })
   const [isLoading, setIsLoading] = useState(true)

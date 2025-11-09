@@ -1,0 +1,399 @@
+// ============================================
+// hooks/use-enhanced-admin-dashboard-data.ts
+// Enhanced Admin Dashboard Data Hook with Advanced Optimizations
+// ============================================
+
+'use client'
+
+import { trpc } from '@/lib/trpc/client'
+import { useMemo, useEffect, useCallback, useState, useRef } from 'react'
+import { dataHydrationManager } from '@/lib/data/data-hydration-manager'
+import { intelligentChangeDetector } from '@/lib/data/intelligent-change-detector'
+import { dataTransformationPipeline } from '@/lib/data/data-transformation-pipeline'
+import { enhancedBackgroundRefresh } from '@/lib/data/enhanced-background-refresh'
+import { smartCacheManager } from '@/lib/cache/smart-cache-manager'
+import { performanceAnalytics } from '@/lib/monitoring/performance-analytics'
+
+interface EnhancedAdminDashboardData {
+  stats: {
+    totalUsers: number
+    totalActivities: number
+    todayActivities: number
+    cached?: boolean
+    lastUpdated?: number
+  } | null
+  analytics: Array<{
+    id: string
+    metric_name: string
+    metric_value: number
+    metric_date: string
+  }> | null
+  recentActivities: Array<{
+    id: string
+    description: string
+    created_at: string
+    profiles?: {
+      email: string
+      full_name: string
+    }
+  }> | null
+  metadata: {
+    hydrationTime: number
+    transformationTime: number
+    cacheHit: boolean
+    dataVersion: string
+    performance: {
+      totalLoadTime: number
+      components: Record<string, number>
+    }
+  }
+}
+
+interface EnhancedAdminDashboardDataState {
+  data: EnhancedAdminDashboardData
+  isLoading: boolean
+  isError: boolean
+  isFetching: boolean
+  isHydrated: boolean
+  errors: Array<unknown>
+  refetch: () => Promise<void>
+  refresh: (force?: boolean) => Promise<void>
+  subscribe: () => () => void
+  getPerformanceMetrics: () => Record<string, unknown>
+  getCacheStatus: () => {
+    hitRate: number
+    size: number
+    entries: number
+  }
+}
+
+export function useEnhancedAdminDashboardData(): EnhancedAdminDashboardDataState {
+  const [isHydrated, setIsHydrated] = useState(false)
+  const [performanceMetrics, setPerformanceMetrics] = useState<Record<string, unknown>>({})
+  const [cacheStatus, setCacheStatus] = useState({ hitRate: 0, size: 0, entries: 0 })
+  
+  // Refs for tracking
+  const hydrationStartTime = useRef<number>(0)
+  const transformationStartTime = useRef<number>(0)
+  const subscriptionRef = useRef<() => void>()
+
+  // Create hydration context
+  const hydrationContext = useMemo(() => ({
+    dataType: 'admin-dashboard',
+    userId: 'admin',
+    sessionId: 'session-123',
+    priority: 'critical' as const,
+    deviceCapabilities: {
+      memory: 'high' as const,
+      storage: 'unlimited' as const,
+      processing: 'high' as const
+    },
+    networkQuality: 'fast' as const
+  }), [])
+
+  // Subscribe to real-time updates
+  const subscribe = useCallback(() => {
+    const subscriptionId = enhancedBackgroundRefresh.subscribe(
+      'admin-dashboard',
+      (data, metadata) => {
+        console.log('Real-time update received:', metadata)
+        // Trigger re-render with new data
+        setIsHydrated(false)
+        setTimeout(() => setIsHydrated(true), 100)
+      },
+      {
+        priority: 'critical',
+        transformRules: ['normalize-dashboard-data']
+      }
+    )
+
+    return () => {
+      enhancedBackgroundRefresh.unsubscribe(subscriptionId)
+    }
+  }, [])
+
+  // Auto-subscribe on mount
+  useEffect(() => {
+    subscriptionRef.current = subscribe()
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current()
+      }
+    }
+  }, [subscribe])
+
+  // Enhanced data fetching with all optimizations
+  const enhancedDataFetch = useCallback(async (): Promise<EnhancedAdminDashboardData> => {
+    hydrationStartTime.current = Date.now()
+    
+    try {
+      // Step 1: Smart Hydration
+      const hydrationResult = await dataHydrationManager.hydrate<{
+        stats: any
+        analytics: any[]
+        recentActivities: any[]
+      }>('admin-dashboard-comprehensive', hydrationContext)
+
+      let sourceData = hydrationResult.data
+
+      // If no cached data, fetch from server
+      if (!sourceData || !hydrationResult.cacheHit) {
+        transformationStartTime.current = Date.now()
+        
+        // Fetch in parallel for optimal performance
+        const [statsData, analyticsData, activitiesData] = await Promise.all([
+          trpc.admin.dashboard.getStats.useQuery().refetch(),
+          trpc.admin.analytics.getAnalytics.useQuery({ days: 7 }).refetch(),
+          trpc.admin.dashboard.getRecentActivities.useQuery({ limit: 5 }).refetch()
+        ])
+
+        // Transform data using pipeline
+        const transformationResult = await dataTransformationPipeline.transform(
+          {
+            stats: statsData.data,
+            analytics: analyticsData.data,
+            recentActivities: activitiesData.data
+          },
+          'dashboard-raw',
+          'dashboard-normalized',
+          {
+            sourceType: 'dashboard-raw',
+            targetType: 'dashboard-normalized',
+            userId: hydrationContext.userId,
+            sessionId: hydrationContext.sessionId,
+            priority: hydrationContext.priority,
+            deviceCapabilities: hydrationContext.deviceCapabilities
+          }
+        )
+
+        sourceData = transformationResult.data
+      }
+
+      // Step 2: Intelligent Change Detection
+      const changeResult = await intelligentChangeDetector.detectChanges(
+        sourceData,
+        null, // Previous data (null for first load)
+        {
+          dataType: 'admin-dashboard',
+          source: 'initial-load',
+          priority: 'critical',
+          requiresImmediateUpdate: true
+        }
+      )
+
+      // Step 3: Final data structure with metadata
+      const finalData: EnhancedAdminDashboardData = {
+        stats: sourceData?.stats || null,
+        analytics: sourceData?.analytics || null,
+        recentActivities: sourceData?.recentActivities || null,
+        metadata: {
+          hydrationTime: hydrationResult.hydrationTime,
+          transformationTime: Date.now() - transformationStartTime.current,
+          cacheHit: hydrationResult.cacheHit,
+          dataVersion: '1.0.0',
+          performance: {
+            totalLoadTime: Date.now() - hydrationStartTime.current,
+            components: {
+              hydration: hydrationResult.hydrationTime,
+              transformation: Date.now() - transformationStartTime.current,
+              changeDetection: changeResult.performanceImpact.detectionTime
+            }
+          }
+        }
+      }
+
+      // Step 4: Update performance metrics
+      const metrics = performanceAnalytics.getSummary()
+      setPerformanceMetrics(metrics)
+
+      // Step 5: Update cache status
+      const cacheStats = smartCacheManager.getStats()
+      setCacheStatus({
+        hitRate: cacheStats.hitRate,
+        size: cacheStats.totalSize,
+        entries: cacheStats.totalEntries
+      })
+
+      setIsHydrated(true)
+      return finalData
+
+    } catch (error) {
+      console.error('Enhanced data fetch failed:', error)
+      setIsHydrated(true)
+      
+      // Return fallback data
+      return {
+        stats: null,
+        analytics: null,
+        recentActivities: null,
+        metadata: {
+          hydrationTime: 0,
+          transformationTime: 0,
+          cacheHit: false,
+          dataVersion: '1.0.0',
+          performance: {
+            totalLoadTime: Date.now() - hydrationStartTime.current,
+            components: {}
+          }
+        }
+      }
+    }
+  }, [hydrationContext])
+
+  // Use the enhanced hook with all optimizations
+  const comprehensiveQuery = trpc.admin.dashboard.getComprehensiveDashboardData.useQuery(
+    { analyticsDays: 7, activitiesLimit: 10 },
+    {
+      staleTime: 30 * 1000, // 30 seconds
+      refetchOnWindowFocus: false,
+      queryFn: async () => {
+        const result = await enhancedDataFetch()
+        return result
+      }
+    }
+  )
+
+  // Memoized state computation
+  const state = useMemo((): EnhancedAdminDashboardDataState => {
+    const data = comprehensiveQuery.data || {
+      stats: null,
+      analytics: null,
+      recentActivities: null,
+      metadata: {
+        hydrationTime: 0,
+        transformationTime: 0,
+        cacheHit: false,
+        dataVersion: '1.0.0',
+        performance: {
+          totalLoadTime: 0,
+          components: {}
+        }
+      }
+    }
+
+    return {
+      data,
+      isLoading: comprehensiveQuery.isLoading || !isHydrated,
+      isError: comprehensiveQuery.isError,
+      isFetching: comprehensiveQuery.isFetching,
+      isHydrated,
+      errors: [comprehensiveQuery.error].filter(Boolean),
+      refetch: async () => {
+        await comprehensiveQuery.refetch()
+      },
+      refresh: async (force = false) => {
+        if (force) {
+          // Force refresh using enhanced background refresh
+          await enhancedBackgroundRefresh.forceRefresh('admin-dashboard')
+        } else {
+          await comprehensiveQuery.refetch()
+        }
+      },
+      subscribe,
+      getPerformanceMetrics: () => performanceMetrics,
+      getCacheStatus: () => cacheStatus
+    }
+  }, [
+    comprehensiveQuery.data,
+    comprehensiveQuery.isLoading,
+    comprehensiveQuery.isError,
+    comprehensiveQuery.isFetching,
+    comprehensiveQuery.error,
+    comprehensiveQuery.refetch,
+    isHydrated,
+    performanceMetrics,
+    cacheStatus,
+    subscribe
+  ])
+
+  return state
+}
+
+// Enhanced hook with specific optimizations for different use cases
+export function useCriticalAdminData() {
+  return useEnhancedAdminDashboardData()
+}
+
+export function useAnalyticsData(analyticsDays: number = 7) {
+  const baseHook = useEnhancedAdminDashboardData()
+  
+  return useMemo(() => ({
+    ...baseHook,
+    data: {
+      ...baseHook.data,
+      analytics: baseHook.data.analytics?.filter(a => {
+        const date = new Date(a.metric_date)
+        const cutoff = new Date()
+        cutoff.setDate(cutoff.getDate() - analyticsDays)
+        return date >= cutoff
+      }) || null
+    }
+  }), [baseHook, analyticsDays])
+}
+
+export function useRecentActivities(limit: number = 10) {
+  const baseHook = useEnhancedAdminDashboardData()
+  
+  return useMemo(() => ({
+    ...baseHook,
+    data: {
+      ...baseHook.data,
+      recentActivities: baseHook.data.recentActivities?.slice(0, limit) || null
+    }
+  }), [baseHook, limit])
+}
+
+// Optimized batch operations
+export function useBatchAdminOperations() {
+  const [isOperating, setIsOperating] = useState(false)
+  const [lastOperation, setLastOperation] = useState<string | null>(null)
+
+  const batchOperation = useCallback(async (
+    operation: 'refresh-all' | 'clear-cache' | 'export-data',
+    options?: Record<string, unknown>
+  ) => {
+    setIsOperating(true)
+    setLastOperation(operation)
+
+    try {
+      switch (operation) {
+        case 'refresh-all':
+          // Force refresh all dashboard data
+          await enhancedBackgroundRefresh.forceRefresh('admin-dashboard')
+          await smartCacheManager.invalidateNamespace('dashboard')
+          break
+          
+        case 'clear-cache':
+          // Clear all cached data
+          smartCacheManager.clear()
+          break
+          
+        case 'export-data':
+          // Export performance and cache data
+          const exportData = {
+            performance: performanceAnalytics.exportData(),
+            cache: smartCacheManager.export(),
+            timestamp: new Date().toISOString()
+          }
+          console.log('Export data:', exportData)
+          break
+          
+        default:
+          throw new Error(`Unknown operation: ${operation}`)
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error(`Batch operation ${operation} failed:`, error)
+      return { success: false, error }
+    } finally {
+      setIsOperating(false)
+    }
+  }, [])
+
+  return {
+    isOperating,
+    lastOperation,
+    batchOperation
+  }
+}

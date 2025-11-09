@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AsyncButton, LoginButton, SaveButton, DeleteButton, SubmitButton } from './async-button';
+import AsyncButton, { LoginButton, SaveButton, DeleteButton, SubmitButton } from './async-button';
 import { Upload, CheckCircle, XCircle } from 'lucide-react';
 
 /**

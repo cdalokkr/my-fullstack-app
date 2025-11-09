@@ -1,0 +1,658 @@
+// ============================================
+// lib/security/security-monitor.ts
+// Comprehensive security monitoring with real-time alerts and anomaly detection
+// ============================================
+import { createClient } from '@supabase/supabase-js'
+
+export interface SecurityEvent {
+  id: string
+  event_type: 'login_attempt' | 'login_success' | 'login_failure' | 'session_creation' | 
+              'session_termination' | 'permission_denied' | 'rate_limit_exceeded' | 
+              'csrf_violation' | 'suspicious_activity' | 'account_lockout' | 
+              'privilege_escalation' | 'data_breach_attempt' | 'admin_action' |
+              'password_change' | 'mfa_setup' | 'mfa_bypass'
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  user_id?: string
+  session_id?: string
+  ip_address: string
+  user_agent: string
+  endpoint: string
+  method: string
+  status_code: number
+  response_time: number
+  metadata: Record<string, any>
+  timestamp: Date
+  resolved: boolean
+  resolved_by?: string
+  resolved_at?: Date
+  alert_triggered: boolean
+  tags: string[]
+}
+
+export interface SecurityAlert {
+  id: string
+  event_id: string
+  alert_type: 'brute_force' | 'suspicious_login' | 'privilege_escalation' | 
+              'rate_limit_breach' | 'unusual_activity' | 'data_breach' | 'system_breach'
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  title: string
+  description: string
+  status: 'active' | 'acknowledged' | 'resolved' | 'false_positive'
+  created_at: Date
+  acknowledged_at?: Date
+  acknowledged_by?: string
+  resolved_at?: Date
+  resolved_by?: string
+  escalation_level: number
+  metadata: Record<string, any>
+}
+
+export interface AnomalyDetection {
+  type: 'login_pattern' | 'request_frequency' | 'response_time' | 'error_rate' | 'user_behavior'
+  baseline: number
+  current: number
+  deviation_percentage: number
+  confidence: number
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  description: string
+  affected_users: string[]
+  time_window: string
+  detected_at: Date
+}
+
+export interface SecurityMetrics {
+  total_events: number
+  events_by_type: Record<string, number>
+  events_by_severity: Record<string, number>
+  active_alerts: number
+  resolved_alerts: number
+  anomaly_count: number
+  top_attack_sources: Array<{ ip: string; count: number }>
+  most_targeted_endpoints: Array<{ endpoint: string; count: number }>
+  failed_login_rate: number
+  average_response_time: number
+  security_score: number
+  last_updated: Date
+}
+
+export class SecurityMonitor {
+  private supabase: any
+  private eventQueue: SecurityEvent[] = []
+  private alertRules: Map<string, any> = new Map()
+  private anomalyThresholds = {
+    failed_logins_per_hour: 10,
+    requests_per_minute: 1000,
+    response_time_deviation: 300, // 300% above baseline
+    error_rate_threshold: 0.05, // 5%
+    unusual_location_login: true,
+    off_hours_activity: true
+  }
+
+  constructor() {
+    this.supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    this.initializeAlertRules()
+    this.startEventProcessor()
+  }
+
+  // Record security event
+  async recordEvent(event: Omit<SecurityEvent, 'id' | 'timestamp'>): Promise<string> {
+    const fullEvent: SecurityEvent = {
+      ...event,
+      id: crypto.randomUUID(),
+      timestamp: new Date()
+    }
+
+    // Add to queue for batch processing
+    this.eventQueue.push(fullEvent)
+
+    // Immediate processing for critical events
+    if (event.severity === 'critical') {
+      await this.processEventImmediate(fullEvent)
+    }
+
+    return fullEvent.id
+  }
+
+  // Check for anomalies in real-time
+  async detectAnomalies(userId?: string): Promise<AnomalyDetection[]> {
+    const anomalies: AnomalyDetection[] = []
+
+    try {
+      // Check for brute force patterns
+      const bruteForceAnomaly = await this.detectBruteForcePattern(userId)
+      if (bruteForceAnomaly) anomalies.push(bruteForceAnomaly)
+
+      // Check for unusual login patterns
+      const loginPatternAnomaly = await this.detectUnusualLoginPattern(userId)
+      if (loginPatternAnomaly) anomalies.push(loginPatternAnomaly)
+
+      // Check for request frequency anomalies
+      const frequencyAnomaly = await this.detectRequestFrequencyAnomaly(userId)
+      if (frequencyAnomaly) anomalies.push(frequencyAnomaly)
+
+      // Check for response time anomalies
+      const responseTimeAnomaly = await this.detectResponseTimeAnomaly()
+      if (responseTimeAnomaly) anomalies.push(responseTimeAnomaly)
+
+      // Check for error rate anomalies
+      const errorRateAnomaly = await this.detectErrorRateAnomaly()
+      if (errorRateAnomaly) anomalies.push(errorRateAnomaly)
+
+    } catch (error) {
+      console.error('Anomaly detection failed:', error)
+    }
+
+    return anomalies
+  }
+
+  // Generate security alerts based on rules
+  async processAlerts(): Promise<string[]> {
+    const alertIds: string[] = []
+
+    for (const event of this.eventQueue) {
+      const alert = await this.evaluateAlertRules(event)
+      if (alert) {
+        const alertId = await this.createAlert(alert)
+        alertIds.push(alertId)
+      }
+    }
+
+    return alertIds
+  }
+
+  // Get security metrics dashboard
+  async getSecurityMetrics(timeRange: '1h' | '24h' | '7d' | '30d' = '24h'): Promise<SecurityMetrics> {
+    const timeFilter = this.getTimeFilter(timeRange)
+    
+    try {
+      const { data: events } = await this.supabase
+        .from('security_events')
+        .select('*')
+        .gte('timestamp', timeFilter)
+        .order('timestamp', { ascending: false })
+
+      const { data: alerts } = await this.supabase
+        .from('security_alerts')
+        .select('*')
+        .gte('created_at', timeFilter)
+        .order('created_at', { ascending: false })
+
+      return this.calculateSecurityMetrics(events || [], alerts || [])
+
+    } catch (error) {
+      console.error('Failed to get security metrics:', error)
+      return this.getDefaultMetrics()
+    }
+  }
+
+  // Real-time security monitoring
+  async getRealTimeAlerts(): Promise<SecurityAlert[]> {
+    const { data } = await this.supabase
+      .from('security_alerts')
+      .select('*')
+      .in('status', ['active', 'acknowledged'])
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    return data || []
+  }
+
+  // Security audit trail
+  async getAuditTrail(userId: string, timeRange: string = '30d'): Promise<SecurityEvent[]> {
+    const timeFilter = this.getTimeFilter(timeRange as any)
+    
+    const { data } = await this.supabase
+      .from('security_events')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('timestamp', timeFilter)
+      .order('timestamp', { ascending: false })
+      .limit(1000)
+
+    return data || []
+  }
+
+  // Acknowledge alert
+  async acknowledgeAlert(alertId: string, acknowledgedBy: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('security_alerts')
+      .update({
+        status: 'acknowledged',
+        acknowledged_at: new Date().toISOString(),
+        acknowledged_by: acknowledgedBy
+      })
+      .eq('id', alertId)
+
+    if (error) throw error
+  }
+
+  // Resolve alert
+  async resolveAlert(alertId: string, resolvedBy: string, resolution?: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('security_alerts')
+      .update({
+        status: 'resolved',
+        resolved_at: new Date().toISOString(),
+        resolved_by: resolvedBy,
+        metadata: {
+          resolution: resolution || 'Manually resolved'
+        }
+      })
+      .eq('id', alertId)
+
+    if (error) throw error
+  }
+
+  // Private methods for anomaly detection
+  private async detectBruteForcePattern(userId?: string): Promise<AnomalyDetection | null> {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    
+    const query = this.supabase
+      .from('security_events')
+      .select('*')
+      .eq('event_type', 'login_failure')
+      .gte('timestamp', oneHourAgo)
+      .order('timestamp', { ascending: false })
+
+    if (userId) {
+      query.eq('user_id', userId)
+    }
+
+    const { data: failures } = await query
+
+    if (!failures || failures.length < this.anomalyThresholds.failed_logins_per_hour) {
+      return null
+    }
+
+    // Group by IP address
+    const ipCounts = failures.reduce((acc, event) => {
+      acc[event.ip_address] = (acc[event.ip_address] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    const maxAttempts = Math.max(...Object.values(ipCounts))
+    if (maxAttempts < this.anomalyThresholds.failed_logins_per_hour) {
+      return null
+    }
+
+    return {
+      type: 'login_pattern',
+      baseline: 0,
+      current: maxAttempts,
+      deviation_percentage: 100,
+      confidence: 0.9,
+      severity: maxAttempts > 20 ? 'critical' : 'high',
+      description: `Detected ${maxAttempts} failed login attempts from single IP`,
+      affected_users: [...new Set(failures.map(f => f.user_id).filter(Boolean))],
+      time_window: '1 hour',
+      detected_at: new Date()
+    }
+  }
+
+  private async detectUnusualLoginPattern(userId?: string): Promise<AnomalyDetection | null> {
+    // This would typically involve geographic location analysis
+    // For now, we'll implement a simple time-based anomaly detection
+    const now = new Date()
+    const hour = now.getHours()
+    
+    // If login attempts during unusual hours (e.g., 2-6 AM)
+    if (hour >= 2 && hour <= 6) {
+      return {
+        type: 'user_behavior',
+        baseline: 0.1,
+        current: 1,
+        deviation_percentage: 900,
+        confidence: 0.7,
+        severity: 'medium',
+        description: 'Login activity during unusual hours',
+        affected_users: userId ? [userId] : [],
+        time_window: 'current',
+        detected_at: now
+      }
+    }
+
+    return null
+  }
+
+  private async detectRequestFrequencyAnomaly(userId?: string): Promise<AnomalyDetection | null> {
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
+    
+    const query = this.supabase
+      .from('security_events')
+      .select('*')
+      .gte('timestamp', oneMinuteAgo)
+      .order('timestamp', { ascending: false })
+
+    if (userId) {
+      query.eq('user_id', userId)
+    }
+
+    const { data: recentRequests } = await query
+    const requestCount = recentRequests?.length || 0
+
+    if (requestCount > this.anomalyThresholds.requests_per_minute) {
+      return {
+        type: 'request_frequency',
+        baseline: 100,
+        current: requestCount,
+        deviation_percentage: ((requestCount - 100) / 100) * 100,
+        confidence: 0.8,
+        severity: requestCount > 2000 ? 'critical' : 'high',
+        description: `Unusually high request frequency: ${requestCount} requests/minute`,
+        affected_users: [userId || 'system'],
+        time_window: '1 minute',
+        detected_at: new Date()
+      }
+    }
+
+    return null
+  }
+
+  private async detectResponseTimeAnomaly(): Promise<AnomalyDetection | null> {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    
+    const { data: events } = await this.supabase
+      .from('security_events')
+      .select('response_time')
+      .gte('timestamp', fiveMinutesAgo)
+      .gt('response_time', 0)
+
+    if (!events || events.length < 10) {
+      return null
+    }
+
+    const responseTimes = events.map(e => e.response_time)
+    const average = responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
+    const max = Math.max(...responseTimes)
+
+    if (max > average * 3 && max > 2000) { // 3x baseline and over 2 seconds
+      return {
+        type: 'response_time',
+        baseline: average,
+        current: max,
+        deviation_percentage: ((max - average) / average) * 100,
+        confidence: 0.7,
+        severity: max > 10000 ? 'critical' : 'high',
+        description: `Response time anomaly detected: ${max}ms (baseline: ${average.toFixed(0)}ms)`,
+        affected_users: [],
+        time_window: '5 minutes',
+        detected_at: new Date()
+      }
+    }
+
+    return null
+  }
+
+  private async detectErrorRateAnomaly(): Promise<AnomalyDetection | null> {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    
+    const { data: events } = await this.supabase
+      .from('security_events')
+      .select('status_code')
+      .gte('timestamp', fiveMinutesAgo)
+
+    if (!events || events.length < 20) {
+      return null
+    }
+
+    const errorCount = events.filter(e => e.status_code >= 400).length
+    const errorRate = errorCount / events.length
+
+    if (errorRate > this.anomalyThresholds.error_rate_threshold) {
+      return {
+        type: 'error_rate',
+        baseline: 0.01, // 1%
+        current: errorRate,
+        deviation_percentage: ((errorRate - 0.01) / 0.01) * 100,
+        confidence: 0.8,
+        severity: errorRate > 0.2 ? 'critical' : 'high',
+        description: `High error rate detected: ${(errorRate * 100).toFixed(1)}%`,
+        affected_users: [],
+        time_window: '5 minutes',
+        detected_at: new Date()
+      }
+    }
+
+    return null
+  }
+
+  // Alert rule evaluation
+  private async evaluateAlertRules(event: SecurityEvent): Promise<Partial<SecurityAlert> | null> {
+    // Brute force attack
+    if (event.event_type === 'login_failure' && event.severity === 'high') {
+      return {
+        alert_type: 'brute_force',
+        severity: 'high',
+        title: 'Brute Force Attack Detected',
+        description: `Multiple failed login attempts from ${event.ip_address}`,
+        escalation_level: 1
+      }
+    }
+
+    // Rate limit exceeded
+    if (event.event_type === 'rate_limit_exceeded') {
+      return {
+        alert_type: 'rate_limit_breach',
+        severity: 'medium',
+        title: 'Rate Limit Breach',
+        description: `Rate limit exceeded on ${event.endpoint}`,
+        escalation_level: 1
+      }
+    }
+
+    // CSRF violation
+    if (event.event_type === 'csrf_violation') {
+      return {
+        alert_type: 'unusual_activity',
+        severity: 'high',
+        title: 'CSRF Protection Violation',
+        description: 'CSRF token validation failed',
+        escalation_level: 2
+      }
+    }
+
+    // Critical security events
+    if (['data_breach_attempt', 'privilege_escalation'].includes(event.event_type)) {
+      return {
+        alert_type: 'system_breach',
+        severity: 'critical',
+        title: 'Critical Security Violation',
+        description: `${event.event_type.replace('_', ' ')} detected`,
+        escalation_level: 3
+      }
+    }
+
+    return null
+  }
+
+  private async createAlert(alertData: Partial<SecurityAlert>): Promise<string> {
+    const { data, error } = await this.supabase
+      .from('security_alerts')
+      .insert({
+        ...alertData,
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        status: 'active',
+        metadata: alertData.metadata || {}
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return data.id
+  }
+
+  // Event processing
+  private async processEventImmediate(event: SecurityEvent): Promise<void> {
+    // Process critical events immediately
+    await this.supabase
+      .from('security_events')
+      .insert({
+        ...event,
+        timestamp: event.timestamp.toISOString()
+      })
+  }
+
+  private startEventProcessor(): void {
+    // Process events in batches every 5 seconds
+    setInterval(async () => {
+      if (this.eventQueue.length > 0) {
+        await this.processEventBatch()
+      }
+    }, 5000)
+  }
+
+  private async processEventBatch(): Promise<void> {
+    const events = this.eventQueue.splice(0, 100) // Process up to 100 events at once
+    
+    try {
+      const formattedEvents = events.map(event => ({
+        ...event,
+        timestamp: event.timestamp.toISOString()
+      }))
+
+      await this.supabase
+        .from('security_events')
+        .insert(formattedEvents)
+
+      // Process alerts for this batch
+      await this.processAlerts()
+
+    } catch (error) {
+      console.error('Failed to process event batch:', error)
+      // Re-queue events for retry
+      this.eventQueue.unshift(...events)
+    }
+  }
+
+  // Utility methods
+  private initializeAlertRules(): void {
+    this.alertRules.set('brute_force', {
+      threshold: 5,
+      timeWindow: 900000, // 15 minutes
+      severity: 'high'
+    })
+
+    this.alertRules.set('rate_limit', {
+      threshold: 1,
+      timeWindow: 60000, // 1 minute
+      severity: 'medium'
+    })
+  }
+
+  private getTimeFilter(range: '1h' | '24h' | '7d' | '30d'): string {
+    const now = Date.now()
+    const timeMap = {
+      '1h': 60 * 60 * 1000,
+      '24h': 24 * 60 * 60 * 1000,
+      '7d': 7 * 24 * 60 * 60 * 1000,
+      '30d': 30 * 24 * 60 * 60 * 1000
+    }
+    
+    return new Date(now - timeMap[range]).toISOString()
+  }
+
+  private calculateSecurityMetrics(events: SecurityEvent[], alerts: SecurityAlert[]): SecurityMetrics {
+    const totalEvents = events.length
+    const eventsByType = events.reduce((acc, event) => {
+      acc[event.event_type] = (acc[event.event_type] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    const eventsBySeverity = events.reduce((acc, event) => {
+      acc[event.severity] = (acc[event.severity] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    const activeAlerts = alerts.filter(a => a.status === 'active').length
+    const resolvedAlerts = alerts.filter(a => a.status === 'resolved').length
+
+    // Calculate security score (0-100)
+    const securityScore = Math.max(0, 100 - (activeAlerts * 10) - (eventsBySeverity.critical || 0) * 20)
+
+    return {
+      total_events: totalEvents,
+      events_by_type: eventsByType,
+      events_by_severity: eventsBySeverity,
+      active_alerts: activeAlerts,
+      resolved_alerts: resolvedAlerts,
+      anomaly_count: 0, // Would be calculated from anomaly detection results
+      top_attack_sources: this.getTopAttackSources(events),
+      most_targeted_endpoints: this.getMostTargetedEndpoints(events),
+      failed_login_rate: this.calculateFailedLoginRate(events),
+      average_response_time: this.calculateAverageResponseTime(events),
+      security_score: securityScore,
+      last_updated: new Date()
+    }
+  }
+
+  private getTopAttackSources(events: SecurityEvent[]): Array<{ ip: string; count: number }> {
+    const ipCounts = events.reduce((acc, event) => {
+      acc[event.ip_address] = (acc[event.ip_address] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    return Object.entries(ipCounts)
+      .map(([ip, count]) => ({ ip, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+  }
+
+  private getMostTargetedEndpoints(events: SecurityEvent[]): Array<{ endpoint: string; count: number }> {
+    const endpointCounts = events.reduce((acc, event) => {
+      acc[event.endpoint] = (acc[event.endpoint] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    return Object.entries(endpointCounts)
+      .map(([endpoint, count]) => ({ endpoint, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+  }
+
+  private calculateFailedLoginRate(events: SecurityEvent[]): number {
+    const loginEvents = events.filter(e => e.event_type.includes('login'))
+    if (loginEvents.length === 0) return 0
+
+    const failedLogins = loginEvents.filter(e => e.event_type === 'login_failure').length
+    return failedLogins / loginEvents.length
+  }
+
+  private calculateAverageResponseTime(events: SecurityEvent[]): number {
+    const eventsWithResponseTime = events.filter(e => e.response_time > 0)
+    if (eventsWithResponseTime.length === 0) return 0
+
+    const totalTime = eventsWithResponseTime.reduce((sum, e) => sum + e.response_time, 0)
+    return totalTime / eventsWithResponseTime.length
+  }
+
+  private getDefaultMetrics(): SecurityMetrics {
+    return {
+      total_events: 0,
+      events_by_type: {},
+      events_by_severity: {},
+      active_alerts: 0,
+      resolved_alerts: 0,
+      anomaly_count: 0,
+      top_attack_sources: [],
+      most_targeted_endpoints: [],
+      failed_login_rate: 0,
+      average_response_time: 0,
+      security_score: 100,
+      last_updated: new Date()
+    }
+  }
+}
+
+// Singleton instance
+let securityMonitor: SecurityMonitor | null = null
+
+export function getSecurityMonitor(): SecurityMonitor {
+  if (!securityMonitor) {
+    securityMonitor = new SecurityMonitor()
+  }
+  return securityMonitor
+}

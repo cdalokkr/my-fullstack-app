@@ -34,7 +34,7 @@ import {
 import { Edit, Trash2, UserPlus, X, Save, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { AsyncButton } from '@/components/ui/async-button'
+import AsyncButton from '@/components/ui/async-button'
 import { UserOperationModalState } from './user-operation-modal-overlay'
 import { EnhancedAddUserModal } from './EnhancedAddUserModal'
 import toast from 'react-hot-toast'
@@ -277,12 +277,12 @@ export default function UserManagement() {
                               <AsyncButton
                                 size="sm"
                                 variant="outline"
-                                className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300"
+                                className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 hover:border-green-300 min-w-[90px] justify-center text-center"
                                 onClick={handleUpdateUser}
                                 aria-label="Save user changes"
                                 loadingText="Saving..."
-                                successText="Saved!!"
-                                errorText="Save failed. Please try again."
+                                successText="Saved!"
+                                errorText="Save failed"
                                 successDuration={2000}
                                 onStateChange={(state) => {
                                   if (state === 'success') {
@@ -294,18 +294,23 @@ export default function UserManagement() {
                                     }, 2000)
                                   }
                                 }}
+                                icons={{
+                                  idle: <Save className="h-4 w-4" aria-hidden="true" />,
+                                  loading: <Save className="h-4 w-4" aria-hidden="true" />,
+                                  success: <Save className="h-4 w-4" aria-hidden="true" />,
+                                  error: <Save className="h-4 w-4" aria-hidden="true" />
+                                }}
                               >
-                                <Save className="h-4 w-4 mr-2" aria-hidden="true" />
                                 Save
                               </AsyncButton>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300"
+                                className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300 min-w-[90px] justify-center text-center"
                                 onClick={handleCancelEdit}
                                 aria-label="Cancel editing user"
                               >
-                                <X className="h-4 w-4 mr-2" aria-hidden="true" />
+                                <X className="h-4 w-4 mr-1" aria-hidden="true" />
                                 Cancel
                               </Button>
                             </>
@@ -314,11 +319,11 @@ export default function UserManagement() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 min-w-[90px] justify-center text-center"
                                 onClick={() => handleEditUser(user)}
                                 aria-label={`Edit user ${user.email}`}
                               >
-                                <Edit className="h-4 w-4 mr-2" aria-hidden="true" />
+                                <Edit className="h-4 w-4 mr-1" aria-hidden="true" />
                                 Edit
                               </Button>
                               <AlertDialog>
@@ -326,11 +331,11 @@ export default function UserManagement() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300"
+                                    className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 hover:border-red-300 min-w-[90px] justify-center text-center"
                                     onClick={() => setDeleteUserId(user.id)}
                                     aria-label={`Delete user ${user.email}`}
                                   >
-                                    <Trash2 className="h-4 w-4 mr-2" aria-hidden="true" />
+                                    <Trash2 className="h-4 w-4 mr-1" aria-hidden="true" />
                                     Delete
                                   </Button>
                                 </AlertDialogTrigger>

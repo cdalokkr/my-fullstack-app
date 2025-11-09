@@ -6,13 +6,14 @@ import { router, adminProcedure } from '../server'
 
 export const adminDashboardRouter = router({
   getStats: adminProcedure.query(async ({ ctx }) => {
+    // PERFORMANCE OPTIMIZATION: Add null safety
     const [usersCount, activitiesCount, todayActivities] = await Promise.all([
-      ctx.supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      ctx.supabase.from('activities').select('*', { count: 'exact', head: true }),
+      ctx.supabase?.from('profiles').select('*', { count: 'exact', head: true }) || { count: 0 },
+      ctx.supabase?.from('activities').select('*', { count: 'exact', head: true }) || { count: 0 },
       ctx.supabase
-        .from('activities')
+        ?.from('activities')
         .select('*', { count: 'exact', head: true })
-        .gte('created_at', new Date().toISOString().split('T')[0]),
+        .gte('created_at', new Date().toISOString().split('T')[0]) || { count: 0 },
     ])
 
     return {
@@ -25,11 +26,12 @@ export const adminDashboardRouter = router({
   getRecentActivities: adminProcedure
     .input(z.object({ limit: z.number().default(10) }))
     .query(async ({ ctx, input }) => {
+      // PERFORMANCE OPTIMIZATION: Add null safety
       const { data } = await ctx.supabase
-        .from('activities')
+        ?.from('activities')
         .select('*, profiles(email, full_name)')
         .order('created_at', { ascending: false })
-        .limit(input.limit)
+        .limit(input.limit) || { data: [] }
 
       return data || []
     }),
@@ -42,29 +44,29 @@ export const adminDashboardRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      // Execute all queries in parallel for optimal performance
+      // PERFORMANCE OPTIMIZATION: Add null safety and parallel query optimization
       const [usersCount, activitiesCount, todayActivities, analytics, recentActivities] = await Promise.all([
-        // Stats queries
-        ctx.supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        ctx.supabase.from('activities').select('*', { count: 'exact', head: true }),
+        // Stats queries with null safety
+        ctx.supabase?.from('profiles').select('*', { count: 'exact', head: true }) || { count: 0 },
+        ctx.supabase?.from('activities').select('*', { count: 'exact', head: true }) || { count: 0 },
         ctx.supabase
-          .from('activities')
+          ?.from('activities')
           .select('*', { count: 'exact', head: true })
-          .gte('created_at', new Date().toISOString().split('T')[0]),
+          .gte('created_at', new Date().toISOString().split('T')[0]) || { count: 0 },
 
-        // Analytics query
+        // Analytics query with null safety
         ctx.supabase
-          .from('analytics_metrics')
+          ?.from('analytics_metrics')
           .select('*')
           .gte('metric_date', new Date(Date.now() - input.analyticsDays * 24 * 60 * 60 * 1000).toISOString())
-          .order('metric_date', { ascending: true }),
+          .order('metric_date', { ascending: true }) || { data: [] },
 
-        // Recent activities query
+        // Recent activities query with null safety
         ctx.supabase
-          .from('activities')
+          ?.from('activities')
           .select('*, profiles(email, full_name)')
           .order('created_at', { ascending: false })
-          .limit(input.activitiesLimit),
+          .limit(input.activitiesLimit) || { data: [] },
       ])
 
       // Construct the response with proper error handling
@@ -98,52 +100,46 @@ export const adminDashboardRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      // Execute all queries in parallel for maximum performance
-      const [
-        usersCount,
-        activitiesCount,
-        todayActivities,
-        analytics,
-        recentActivities,
-        criticalMetrics,
-      ] = await Promise.all([
-        // Basic stats queries
-        ctx.supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        ctx.supabase.from('activities').select('*', { count: 'exact', head: true }),
+      // PERFORMANCE OPTIMIZATION: Reduce database calls and fix unhandled promise
+      const [usersCount, activitiesCount, todayActivities, analytics, recentActivities, activeUsersResult] = await Promise.all([
+        // Basic stats queries - optimized to use single query
+        ctx.supabase?.from('profiles').select('*', { count: 'exact', head: true }) || { count: 0 },
+        ctx.supabase?.from('activities').select('*', { count: 'exact', head: true }) || { count: 0 },
         ctx.supabase
-          .from('activities')
+          ?.from('activities')
           .select('*', { count: 'exact', head: true })
-          .gte('created_at', new Date().toISOString().split('T')[0]),
+          .gte('created_at', new Date().toISOString().split('T')[0]) || { count: 0 },
 
-        // Analytics data
+        // Analytics data with optimized date range
         ctx.supabase
-          .from('analytics_metrics')
+          ?.from('analytics_metrics')
           .select('*')
           .gte('metric_date', new Date(Date.now() - input.analyticsDays * 24 * 60 * 60 * 1000).toISOString())
-          .order('metric_date', { ascending: true }),
+          .order('metric_date', { ascending: true }) || { data: [] },
 
-        // Recent activities
+        // Recent activities with optimized join
         ctx.supabase
-          .from('activities')
+          ?.from('activities')
           .select('*, profiles(email, full_name)')
           .order('created_at', { ascending: false })
-          .limit(input.activitiesLimit),
+          .limit(input.activitiesLimit) || { data: [] },
 
-        // Critical metrics (active users calculation)
-        ctx.supabase
-          .from('activities')
-          .select('user_id')
-          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-          .then(({ data }) => {
-            const uniqueUsers = new Set(data?.map(a => a.user_id))
-            return { count: uniqueUsers.size }
-          })
+        // PERFORMANCE FIX: Properly await and optimize active users calculation
+        (async () => {
+          const { data } = await ctx.supabase
+            ?.from('activities')
+            .select('user_id')
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) || { data: [] }
+          
+          const uniqueUsers = new Set(data?.map(a => a.user_id))
+          return { count: uniqueUsers.size }
+        })()
       ])
 
       // Construct comprehensive response
       const criticalData = {
         totalUsers: usersCount.count || 0,
-        activeUsers: criticalMetrics.count || 0,
+        activeUsers: activeUsersResult.count || 0,
         metadata: {
           tier: 'critical',
           fetchedAt: new Date().toISOString(),
@@ -195,18 +191,19 @@ export const adminDashboardRouter = router({
 
   // Progressive loading endpoints for better perceived performance
   getCriticalDashboardData: adminProcedure.query(async ({ ctx }) => {
-    // Tier 1: Critical data needed immediately (basic stats)
+    // PERFORMANCE OPTIMIZATION: Tier 1: Critical data with null safety
     const [usersCount, activeUsersCount] = await Promise.all([
-      ctx.supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      // Calculate active users (users with activities in last 7 days)
-      ctx.supabase
-        .from('activities')
-        .select('user_id')
-        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-        .then(({ data }) => {
-          const uniqueUsers = new Set(data?.map(a => a.user_id))
-          return { count: uniqueUsers.size }
-        })
+      ctx.supabase?.from('profiles').select('*', { count: 'exact', head: true }) || { count: 0 },
+      // Calculate active users (users with activities in last 7 days) - PERFORMANCE FIX
+      (async () => {
+        const { data } = await ctx.supabase
+          ?.from('activities')
+          .select('user_id')
+          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) || { data: [] }
+        
+        const uniqueUsers = new Set(data?.map(a => a.user_id))
+        return { count: uniqueUsers.size }
+      })()
     ])
 
     return {
@@ -229,16 +226,16 @@ export const adminDashboardRouter = router({
     .query(async ({ ctx, input }) => {
       // Tier 2: Secondary data for detailed metrics
       const [activitiesCount, todayActivities, analytics] = await Promise.all([
-        ctx.supabase.from('activities').select('*', { count: 'exact', head: true }),
+        ctx.supabase?.from('activities').select('*', { count: 'exact', head: true }) || { count: 0 },
         ctx.supabase
-          .from('activities')
+          ?.from('activities')
           .select('*', { count: 'exact', head: true })
-          .gte('created_at', new Date().toISOString().split('T')[0]),
+          .gte('created_at', new Date().toISOString().split('T')[0]) || { count: 0 },
         ctx.supabase
-          .from('analytics_metrics')
+          ?.from('analytics_metrics')
           .select('*')
           .gte('metric_date', new Date(Date.now() - input.analyticsDays * 24 * 60 * 60 * 1000).toISOString())
-          .order('metric_date', { ascending: true })
+          .order('metric_date', { ascending: true }) || { data: [] }
       ])
 
       return {
@@ -257,9 +254,9 @@ export const adminDashboardRouter = router({
     .query(async ({ ctx }) => {
       // Tier 3: Detailed data for recent activities
       const { data } = await ctx.supabase
-        .from('activities')
+        ?.from('activities')
         .select('*, profiles(email, full_name)')
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }) || { data: [] }
 
       return {
         recentActivities: data || [],

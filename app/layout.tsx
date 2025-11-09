@@ -7,6 +7,7 @@ import './globals.css'
 import { TRPCProvider } from '@/lib/trpc/provider'
 import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -32,7 +33,7 @@ export default function RootLayout({
         >
           <TRPCProvider>
             {children}
-            <Toaster position="top-right" />
+            <SonnerToaster richColors position="top-center" />
           </TRPCProvider>
         </ThemeProvider>
       </body>

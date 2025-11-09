@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { AsyncButton } from '@/components/ui/async-button'
+import AsyncButton from '@/components/ui/async-button'
 import { 
   Select, 
   SelectContent, 
@@ -113,42 +113,34 @@ export function UserManagementEnhancedWithLoading() {
   const handleSaveUser = async () => {
     if (!editingUserId) return
 
-    try {
-      await updateUserMutation.mutateAsync({
-        userId: editingUserId,
-        firstName: tempFirstName.trim(),
-        lastName: tempLastName.trim()
-      })
-      
-      await updateUserRoleMutation.mutateAsync({
-        userId: editingUserId,
-        role: tempRole
-      })
-      
-      setEditingUserId(null)
-      toast.success('User updated successfully')
-    } catch (error) {
-      console.error('Failed to update user:', error)
-    }
+    updateUserMutation.mutate({
+      userId: editingUserId,
+      firstName: tempFirstName.trim(),
+      lastName: tempLastName.trim()
+    })
+    
+    updateUserRoleMutation.mutate({
+      userId: editingUserId,
+      role: tempRole
+    })
+    
+    setEditingUserId(null)
+    toast.success('User updated successfully')
   }
 
   // Handle user deletion
   const handleDeleteUser = async () => {
     if (!deleteUserId) return
 
-    try {
-      await deleteUserMutation.mutateAsync({ userId: deleteUserId })
-      setDeleteUserId(null)
-    } catch (error) {
-      console.error('Failed to delete user:', error)
-    }
+    deleteUserMutation.mutate({ userId: deleteUserId })
+    setDeleteUserId(null)
   }
 
   // Create user form
   const CreateUserForm = () => (
     <div className="p-6 border rounded-lg bg-background">
       <h3 className="text-lg font-semibold mb-4">Create New User</h3>
-      <form onSubmit={(e) => {
+      <form onSubmit={async (e) => {
         e.preventDefault()
         const formData = new FormData(e.currentTarget as HTMLFormElement)
         const firstName = formData.get('firstName') as string
@@ -157,18 +149,19 @@ export function UserManagementEnhancedWithLoading() {
         const password = formData.get('password') as string
         const role = formData.get('role') as UserRole
 
-        createUserMutation.mutate({
-          email,
-          password,
-          firstName,
-          lastName,
-          role
-        }).then(() => {
+        try {
+          await createUserMutation.mutateAsync({
+            email,
+            password,
+            firstName,
+            lastName,
+            role
+          })
           setShowCreateForm(false)
           toast.success('User created successfully')
-        }).catch((error) => {
+        } catch (error) {
           toast.error('Failed to create user')
-        })
+        }
       }}>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
@@ -351,9 +344,9 @@ export function UserManagementEnhancedWithLoading() {
                 </label>
                 <div className="text-sm text-muted-foreground p-2 border rounded">
                   {usersQuery.data?.total || 0} users found
-                  {loadingProgress && (
-                    <div className="mt-1 text-xs">
-                      {loadingProgress.current} of {loadingProgress.total} {loadingProgress.label}
+                  {isLoading && (
+                    <div className="mt-1 text-xs text-primary">
+                      Loading...
                     </div>
                   )}
                 </div>
