@@ -38,8 +38,11 @@ export function SkeletonTransitionManager({
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [contentVisible, setContentVisible] = useState(false)
   const [skeletonVisible, setSkeletonVisible] = useState(true)
-  const transitionTimeoutRef = useRef<NodeJS.Timeout>()
-  const skeletonTimeoutRef = useRef<NodeJS.Timeout>()
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const skeletonTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Fix the other useRef usage
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const {
     duration = 400,
@@ -206,7 +209,7 @@ export function useSkeletonTransition(
 ) {
   const [isVisible, setIsVisible] = useState(!isLoading)
   const [isSkeletonVisible, setIsSkeletonVisible] = useState(isLoading)
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const {
     duration = 300,
@@ -275,7 +278,7 @@ export function withSkeletonTransition<P extends object>(
         error={error}
         onRetry={onRetry}
         transitionConfig={config}
-        loadingComponent={<skeletonComponent />}
+        loadingComponent={<div className="animate-pulse">Loading...</div>}
       >
         <Component {...(componentProps as P)} />
       </SkeletonTransitionManager>

@@ -181,12 +181,19 @@ export function ProgressiveLoadingDemo() {
   const generateMockActivities = (count: number = 20) =>
     Array.from({ length: count }, (_, i) => ({
       id: `activity-${i}`,
-      type: i % 4 === 0 ? 'system_event' : 'user_action',
+      type: (i % 4 === 0 ? 'system_event' : 'user_action') as 'user_action' | 'system_event' | 'data_change' | 'error' | 'success' | 'info',
       title: `Activity ${i + 1}`,
       description: `This is a ${i % 3 === 0 ? 'system' : 'user'} activity`,
       timestamp: new Date(Date.now() - i * 300000),
-      user: { name: `User ${i + 1}` },
-      severity: i % 5 === 0 ? 'high' : 'medium'
+      user: {
+        id: `user-${i + 1}`,
+        name: `User ${i + 1}`,
+        email: `user${i + 1}@example.com`,
+        avatar: undefined
+      },
+      severity: (i % 5 === 0 ? 'high' : 'medium') as 'low' | 'medium' | 'high' | 'critical',
+      category: i % 3 === 0 ? 'security' : i % 2 === 0 ? 'performance' : 'general',
+      read: i % 3 === 0
     }))
 
   const generateMockUsers = (count: number = 50) =>
@@ -194,8 +201,8 @@ export function ProgressiveLoadingDemo() {
       id: `user-${i}`,
       name: `User ${i + 1}`,
       email: `user${i + 1}@example.com`,
-      role: i % 4 === 0 ? 'admin' : i % 3 === 0 ? 'moderator' : 'user',
-      status: i % 6 === 0 ? 'inactive' : 'active',
+      role: (i % 4 === 0 ? 'admin' : i % 3 === 0 ? 'moderator' : 'user') as 'user' | 'admin' | 'moderator' | 'guest',
+      status: (i % 6 === 0 ? 'inactive' : 'active') as 'active' | 'inactive' | 'pending' | 'suspended',
       lastActive: new Date(Date.now() - i * 1800000),
       joinDate: new Date(Date.now() - i * 86400000)
     }))

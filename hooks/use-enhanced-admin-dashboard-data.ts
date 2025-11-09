@@ -69,7 +69,7 @@ export function useEnhancedAdminDashboardData(): EnhancedAdminDashboardDataState
   // Refs for tracking
   const hydrationStartTime = useRef<number>(0)
   const transformationStartTime = useRef<number>(0)
-  const subscriptionRef = useRef<() => void | undefined>()
+  const subscriptionRef = useRef<() => void | undefined>(undefined)
 
   // Create hydration context
   const hydrationContext = useMemo(() => ({

@@ -396,7 +396,7 @@ export function ProgressiveActivityFeed({
                 <span>{activity.user.name}</span>
                 <span>•</span>
                 <Clock className="h-3 w-3" />
-                <span>{formatDistanceToNow(activity.timestamp, { addSuffix: true })}</span>
+                <span>{formatDistanceToNow(activity.timestamp)}</span>
               </div>
             )}
             
