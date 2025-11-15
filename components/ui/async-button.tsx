@@ -2,7 +2,7 @@
 
 import { useState, useRef, useLayoutEffect, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, CheckCircle, AlertCircle, UserPlus } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, UserPlus, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type AsyncState = 'idle' | 'loading' | 'success' | 'error';
@@ -110,7 +110,7 @@ export default function AsyncButton({
   };
 
   const currentIcons = {
-    idle: <UserPlus className="w-4 h-4" />,
+    idle: <Save className="w-4 h-4" />,
     ...defaultIcons,
     ...icons
   };
@@ -355,12 +355,13 @@ export function LoginButton({
   );
 }
 
-export function SaveButton({ successDuration = 2000, ...props }: Omit<AsyncButtonProps, 'loadingText' | 'successText'>) {
+export function SaveButton({ successDuration = 2000, variant = 'success', ...props }: Omit<AsyncButtonProps, 'loadingText' | 'successText'>) {
   return (
     <AsyncButton
       loadingText="Saving..."
-      successText="Saved successfully!"
+      successText="Saved !!"
       successDuration={successDuration}
+      variant={variant}
       {...props}
     />
   );

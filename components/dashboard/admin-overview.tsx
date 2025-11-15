@@ -19,6 +19,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 
 interface MetricCardProps {
   title: string
@@ -81,7 +82,7 @@ function MetricCard({ title, value, description, icon, loading, iconBgColor, ico
 
   if (loading) {
     return (
-      <MetricCardSkeleton 
+      <MetricCardSkeleton
         title={title}
         description={description}
         icon={icon}
@@ -93,32 +94,45 @@ function MetricCard({ title, value, description, icon, loading, iconBgColor, ico
   }
 
   return (
-    <Card
-      className={`group shadow-lg bg-muted/30 border-2 ${borderColor || 'border-transparent'} group-hover:${borderHoverColor} transition-all duration-300`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      role="region"
-      aria-label={`${title} metric card showing ${value} ${description}`}
-      tabIndex={0}
+    <motion.div
+      whileHover={{
+        scale: 1.02,
+        y: -4,
+        transition: { duration: 0.3, ease: "easeOut" }
+      }}
+      whileTap={{ scale: 0.98 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
     >
-      <CardHeader className="pb-0 pt-0">
-        <CardTitle className="text-xl font-medium m-0">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex items-center gap-2">
-          <div className={`p-1.5 rounded-full ${iconBgColor || 'bg-gray-100'} group-hover:bg-opacity-80 transition-all duration-300`}>
-            {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, {
-              className: `h-8 w-8 ${isHovered ? iconColorHover : (iconColor || 'text-muted-foreground')} transition-all duration-300`,
-              'aria-hidden': true
-            }) : icon}
+      <Card
+        className={`group shadow-lg bg-muted/30 border-2 ${borderColor || 'border-transparent'} hover:shadow-2xl transition-all duration-300 ${isHovered ? `${borderHoverColor} shadow-[0_0_20px_rgba(0,0,0,0.1)]` : ''}`}
+        role="region"
+        aria-label={`${title} metric card showing ${value} ${description}`}
+        tabIndex={0}
+      >
+        <CardHeader className="pb-0 pt-0">
+          <CardTitle className="text-xl font-medium m-0">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="flex items-center gap-2">
+            <motion.div
+              className={`p-1.5 rounded-full ${iconBgColor || 'bg-gray-100'} transition-all duration-300`}
+              animate={isHovered ? { scale: 1.1, rotate: 5 } : { scale: 1, rotate: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, {
+                className: `h-8 w-8 ${isHovered ? iconColorHover : (iconColor || 'text-muted-foreground')} transition-all duration-300`,
+                'aria-hidden': true
+              }) : icon}
+            </motion.div>
+            <div className="text-2xl font-bold transition-all duration-500 ease-in-out" aria-live="polite">
+              {value}
+            </div>
           </div>
-          <div className="text-2xl font-bold transition-all duration-500 ease-in-out" aria-live="polite">
-            {value}
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground mt-1">{description}</p>
-      </CardContent>
-    </Card>
+          <p className="text-sm text-muted-foreground mt-1">{description}</p>
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 }
 
@@ -226,40 +240,96 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="touch"
-              className="group bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 "
-              onClick={() => setShowAddUserSheet(true)}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ duration: 0.2 }}
             >
-              <span className="inline-flex items-center justify-center p-1 rounded-full bg-blue-100 mr-2 transition-colors duration-300 group-hover:bg-blue-200">
-                <UserPlus className="h-4 w-4 text-blue-600 transition-colors duration-300 group-hover:text-blue-700" />
-              </span>
-              Add User
-            </Button>
-            <Link href="/admin/users/all">
-              <Button variant="outline" size="touch" className="group bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 ">
-                <span className="inline-flex items-center justify-center p-1 rounded-full bg-blue-100 mr-2 transition-colors duration-300 group-hover:bg-blue-200">
-                  <Users className="h-4 w-4 text-blue-600 transition-colors duration-300 group-hover:text-blue-700" />
-                </span>
-                Manage Users
+              <Button
+                variant="outline"
+                size="touch"
+                className="group relative overflow-hidden bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300"
+                onClick={() => setShowAddUserSheet(true)}
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/20 to-blue-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                <motion.span
+                  className="inline-flex items-center justify-center p-1 rounded-full bg-blue-100 mr-2 transition-colors duration-300 group-hover:bg-blue-200"
+                  whileHover={{ rotate: 360 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <UserPlus className="h-4 w-4 text-blue-600 transition-colors duration-300 group-hover:text-blue-700" />
+                </motion.span>
+                Add User
               </Button>
+            </motion.div>
+            <Link href="/admin/users/all">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Button
+                  variant="outline"
+                  size="touch"
+                  className="group relative overflow-hidden bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300"
+                >
+                  <span className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/20 to-blue-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                  <motion.span
+                    className="inline-flex items-center justify-center p-1 rounded-full bg-blue-100 mr-2 transition-colors duration-300 group-hover:bg-blue-200"
+                    whileHover={{ scale: 1.2 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Users className="h-4 w-4 text-blue-600 transition-colors duration-300 group-hover:text-blue-700" />
+                  </motion.span>
+                  Manage Users
+                </Button>
+              </motion.div>
             </Link>
             <Link href="/admin">
-              <Button variant="outline" size="touch" className="group bg-orange-50 hover:bg-orange-100 active:bg-orange-200 text-orange-700 border-orange-200 hover:border-orange-300 active:border-orange-400 ">
-                <span className="inline-flex items-center justify-center p-1 rounded-full bg-orange-100 mr-2 transition-colors duration-300 group-hover:bg-orange-200">
-                  <BarChart3 className="h-4 w-4 text-orange-600 transition-colors duration-300 group-hover:text-orange-700" />
-                </span>
-                View Reports
-              </Button>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Button
+                  variant="outline"
+                  size="touch"
+                  className="group relative overflow-hidden bg-orange-50 hover:bg-orange-100 active:bg-orange-200 text-orange-700 border-orange-200 hover:border-orange-300 active:border-orange-400 hover:shadow-lg transition-all duration-300"
+                >
+                  <span className="absolute inset-0 bg-gradient-to-r from-orange-400/0 via-orange-400/20 to-orange-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                  <motion.span
+                    className="inline-flex items-center justify-center p-1 rounded-full bg-orange-100 mr-2 transition-colors duration-300 group-hover:bg-orange-200"
+                    whileHover={{ y: -2 }}
+                    transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
+                  >
+                    <BarChart3 className="h-4 w-4 text-orange-600 transition-colors duration-300 group-hover:text-orange-700" />
+                  </motion.span>
+                  View Reports
+                </Button>
+              </motion.div>
             </Link>
             <Link href="/admin/settings">
-              <Button variant="outline" size="touch" className="group bg-purple-50 hover:bg-purple-100 active:bg-purple-200 text-purple-700 border-purple-200 hover:border-purple-300 active:border-purple-400 ">
-                <span className="inline-flex items-center justify-center p-1 rounded-full bg-purple-100 mr-2 transition-colors duration-300 group-hover:bg-purple-200">
-                  <Settings className="h-4 w-4 text-purple-600 transition-colors duration-300 group-hover:text-purple-700" />
-                </span>
-                System Settings
-              </Button>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Button
+                  variant="outline"
+                  size="touch"
+                  className="group relative overflow-hidden bg-purple-50 hover:bg-purple-100 active:bg-purple-200 text-purple-700 border-purple-200 hover:border-purple-300 active:border-purple-400 hover:shadow-lg transition-all duration-300"
+                >
+                  <span className="absolute inset-0 bg-gradient-to-r from-purple-400/0 via-purple-400/20 to-purple-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                  <motion.span
+                    className="inline-flex items-center justify-center p-1 rounded-full bg-purple-100 mr-2 transition-colors duration-300 group-hover:bg-purple-200"
+                    whileHover={{ rotate: 180 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <Settings className="h-4 w-4 text-purple-600 transition-colors duration-300 group-hover:text-purple-700" />
+                  </motion.span>
+                  System Settings
+                </Button>
+              </motion.div>
             </Link>
           </div>
         </CardContent>

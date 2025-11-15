@@ -28,8 +28,26 @@ function AccordionItem({
 function AccordionTrigger({
   className,
   children,
+  nonInteractive = false,
   ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Trigger>) {
+}: React.ComponentProps<typeof AccordionPrimitive.Trigger> & { nonInteractive?: boolean }) {
+  if (nonInteractive) {
+    return (
+      <AccordionPrimitive.Header className="flex">
+        <div
+          data-slot="accordion-trigger"
+          className={cn(
+            "flex flex-1 items-start justify-between gap-4 rounded-md py-4 text-left text-sm font-medium",
+            className
+          )}
+          {...(props as any)}
+        >
+          {children}
+        </div>
+      </AccordionPrimitive.Header>
+    )
+  }
+
   return (
     <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger

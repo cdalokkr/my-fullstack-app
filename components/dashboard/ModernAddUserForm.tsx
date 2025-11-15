@@ -35,7 +35,8 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion"
-import { UserPlus, User, Mail, Shield, Phone, Lock, X } from "lucide-react"
+import { UserPlus, User, Mail, Shield, Phone, Lock } from "lucide-react"
+import { CancelButton } from "@/components/ui/action-button"
 import { trpc } from "@/lib/trpc/client"
 import { cacheInvalidation } from "@/lib/cache/cache-invalidation"
 import { smartCacheManager } from "@/lib/cache/smart-cache-manager"
@@ -294,9 +295,9 @@ export function ModernAddUserForm({
 
           <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6" noValidate>
             {/* Personal Information Section */}
-            <Accordion type="single" collapsible className="bg-white/80 backdrop-blur-sm rounded-lg border">
+            <Accordion type="multiple" defaultValue={["personal-info"]} className="bg-white/80 backdrop-blur-sm rounded-lg border">
               <AccordionItem value="personal-info" className="border-b-0">
-                <AccordionTrigger className="px-6 py-4 bg-muted/80">
+                <AccordionTrigger nonInteractive className="px-6 py-4 bg-muted/80">
                   <div className="flex items-center gap-3">
                     <User className="h-5 w-5" />
                     <span>Personal Information</span>
@@ -416,9 +417,9 @@ export function ModernAddUserForm({
             </Accordion>
             
             {/* Account Credentials Section */}
-            <Accordion type="single" collapsible className="bg-white/80 backdrop-blur-sm rounded-lg border">
+            <Accordion type="multiple" defaultValue={["account-credentials"]} className="bg-white/80 backdrop-blur-sm rounded-lg border">
               <AccordionItem value="account-credentials" className="border-b-0">
-                <AccordionTrigger className="px-6 py-4 bg-muted/80">
+                <AccordionTrigger nonInteractive className="px-6 py-4 bg-muted/80">
                   <div className="flex items-center gap-3">
                     <Mail className="h-5 w-5" />
                     <span>Account Credentials</span>
@@ -479,9 +480,9 @@ export function ModernAddUserForm({
             </Accordion>
             
             {/* Access & Permissions Section */}
-            <Accordion type="single" collapsible className="bg-white/80 backdrop-blur-sm rounded-lg border">
+            <Accordion type="multiple" defaultValue={["access-permissions"]} className="bg-white/80 backdrop-blur-sm rounded-lg border">
               <AccordionItem value="access-permissions" className="border-b-0">
-                <AccordionTrigger className="px-6 py-4 bg-muted/80">
+                <AccordionTrigger nonInteractive className="px-6 py-4 bg-muted/80">
                   <div className="flex items-center gap-3">
                     <Shield className="h-5 w-5" />
                     <span>Access & Permissions</span>
@@ -515,20 +516,19 @@ export function ModernAddUserForm({
 
             {/* Submit and Cancel Buttons */}
             <div className="flex gap-4 pt-6 mt-6 border-t border-border/20">
-              <Button
-                type="button"
-                variant="outline"
+              <CancelButton
                 onClick={handleCancel}
                 disabled={form.formState.isSubmitting || isSubmitting}
-                className="flex-1 h-12 text-base font-semibold"
+                size="lg"
+                className="flex-1"
               >
-                <X className="h-4 w-4 mr-2" />
                 Cancel
-              </Button>
+              </CancelButton>
               <CreateUserButton
                 onClick={handleFormSubmit}
                 disabled={!form.formState.isValid || form.formState.isSubmitting || isSubmitting || isSuccess}
-                className="flex-1 h-12 text-base font-semibold"
+                size="lg"
+                className="flex-1"
                 asyncState={isSubmitting ? 'loading' : isSuccess ? 'success' : submitError ? 'error' : 'idle'}
                 errorText={submitError || "Failed to create user - Please try again"}
               >
