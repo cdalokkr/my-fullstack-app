@@ -6,6 +6,10 @@ import { router, protectedProcedure } from '../server'
 
 export const notificationRouter = router({
   getAll: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.supabase) {
+      throw new Error('Database service unavailable')
+    }
+    
     const { data } = await ctx.supabase
       .from('notifications')
       .select('*')
@@ -17,6 +21,10 @@ export const notificationRouter = router({
   }),
 
   getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.supabase) {
+      throw new Error('Database service unavailable')
+    }
+    
     const { count } = await ctx.supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
@@ -29,6 +37,10 @@ export const notificationRouter = router({
   markAsRead: protectedProcedure
     .input(z.object({ notificationId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Database service unavailable')
+      }
+      
       const { error } = await ctx.supabase
         .from('notifications')
         .update({ is_read: true })
@@ -40,6 +52,10 @@ export const notificationRouter = router({
     }),
 
   markAllAsRead: protectedProcedure.mutation(async ({ ctx }) => {
+    if (!ctx.supabase) {
+      throw new Error('Database service unavailable')
+    }
+    
     const { error } = await ctx.supabase
       .from('notifications')
       .update({ is_read: true })

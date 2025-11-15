@@ -3,7 +3,6 @@
 // Enhanced Background Refresh with Real-time Updates
 // ============================================
 
-import { dataHydrationManager } from './data-hydration-manager'
 import { intelligentChangeDetector } from './intelligent-change-detector'
 import { dataTransformationPipeline } from './data-transformation-pipeline'
 import { smartCacheManager } from '@/lib/cache/smart-cache-manager'

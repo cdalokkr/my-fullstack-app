@@ -20,6 +20,13 @@ export const authRouter = router({
   login: publicProcedure
     .input(loginSchema)
     .mutation(async ({ input, ctx }) => {
+      if (!ctx.supabase) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Authentication service unavailable',
+        })
+      }
+      
       try {
         const { data, error } = await ctx.supabase.auth.signInWithPassword({
           email: input.email,
@@ -31,7 +38,7 @@ export const authRouter = router({
           const errorMessage = error.message?.toLowerCase() || ''
           const errorDescription = error.message || ''
           
-          if (errorMessage.includes('invalid login credentials') || 
+          if (errorMessage.includes('invalid login credentials') ||
               errorMessage.includes('invalid credentials') ||
               errorMessage.includes('email not confirmed')) {
             throw new TRPCError({
@@ -103,6 +110,13 @@ export const authRouter = router({
     }),
 
   logout: publicProcedure.mutation(async ({ ctx }) => {
+    if (!ctx.supabase) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Authentication service unavailable',
+      })
+    }
+    
     console.log('Logout procedure executed for user:', ctx.user?.id)
     if (ctx.user) {
       await ctx.supabase.from('activities').insert({
@@ -118,6 +132,13 @@ export const authRouter = router({
   logActivity: publicProcedure
     .input(z.object({ type: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      if (!ctx.supabase) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Database service unavailable',
+        })
+      }
+      
       if (ctx.user) {
         await ctx.supabase.from('activities').insert({
           user_id: ctx.user.id,

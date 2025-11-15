@@ -39,6 +39,7 @@ type UserFormData = z.infer<typeof userSchema>;
 
 export default function CreateUserDialog() {
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
@@ -50,13 +51,13 @@ export default function CreateUserDialog() {
       password: "",
       role: "User",
     },
-    mode: "onSubmit", // ✅ only validate on submit
+    mode: "onChange", // validate as user types
   });
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting: formSubmitting },
     trigger,
     setValue,
     watch,
@@ -83,11 +84,27 @@ export default function CreateUserDialog() {
 
   // ✅ AsyncButton handler that checks form validity first
   const handleAsyncButtonClick = async () => {
-    const isValid = await trigger(); // trigger validation manually
-    if (!isValid) throw new Error("Please correct the highlighted fields");
-    const data = form.getValues();
-    await handleCreateUser(data);
+    try {
+      setIsSubmitting(true);
+      const isValid = await trigger(); // trigger validation manually
+      if (!isValid) throw new Error("Please correct the highlighted fields");
+      const data = form.getValues();
+      await handleCreateUser(data);
+      setIsSubmitting(false);
+    } catch (error) {
+      setIsSubmitting(false);
+      throw error;
+    }
   };
+
+  // Check for form validation errors
+  const hasFormErrors = Object.keys(form.formState.errors).length > 0;
+  
+  // Check if required fields have values
+  const hasRequiredFields = !!form.watch('firstName') &&
+                           !!form.watch('lastName') &&
+                           !!form.watch('email') &&
+                           !!form.watch('password');
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -256,11 +273,15 @@ export default function CreateUserDialog() {
             </button>
 
             <AsyncButton
-              onClick={handleAsyncButtonClick} // ✅ validation first, then async logic
-              loadingText="Creating..."
-              successText="Created!"
-              errorText="Fix errors"
+              onClick={handleAsyncButtonClick}
+              loadingText="Creating user..."
+              successText="User created!"
+              errorText={hasFormErrors ? "Please fix form errors" : "Failed to create user"}
+              hasFormErrors={hasFormErrors}
+              successDuration={3000}
               className="min-w-[140px]"
+              disabled={!hasRequiredFields || isSubmitting || formSubmitting}
+              variant="primary"
             >
               Create User
             </AsyncButton>

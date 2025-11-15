@@ -264,18 +264,24 @@ class AutomatedTestExecutor {
     return report
   }
 
-  private calculateCategoryScores() {
+  private calculateCategoryScores(): {
+    performance: number
+    security: number
+    integration: number
+    ux: number
+    overall: number
+  } {
     const categoryResults = {
-      performance: this.executionResults.filter(r => 
+      performance: this.executionResults.filter(r =>
         this.testSuites.find(s => s.name === r.suiteName && s.category === 'performance')
       ),
-      security: this.executionResults.filter(r => 
+      security: this.executionResults.filter(r =>
         this.testSuites.find(s => s.name === r.suiteName && s.category === 'security')
       ),
-      integration: this.executionResults.filter(r => 
+      integration: this.executionResults.filter(r =>
         this.testSuites.find(s => s.name === r.suiteName && s.category === 'integration')
       ),
-      ux: this.executionResults.filter(r => 
+      ux: this.executionResults.filter(r =>
         this.testSuites.find(s => s.name === r.suiteName && s.category === 'ux')
       )
     }
@@ -284,10 +290,11 @@ class AutomatedTestExecutor {
       performance: this.calculateCategoryScore(categoryResults.performance),
       security: this.calculateCategoryScore(categoryResults.security),
       integration: this.calculateCategoryScore(categoryResults.integration),
-      ux: this.calculateCategoryScore(categoryResults.ux)
+      ux: this.calculateCategoryScore(categoryResults.ux),
+      overall: 0 // Initialize the overall score
     }
 
-    scores.overall = Object.values(scores).reduce((sum, score) => sum + score, 0) / 4
+    scores.overall = (scores.performance + scores.security + scores.integration + scores.ux) / 4
 
     return scores
   }
@@ -415,4 +422,5 @@ if (require.main === module) {
   main()
 }
 
-export { AutomatedTestExecutor, TestExecutionReport, TestSuite, TestExecutionResult }
+export { AutomatedTestExecutor }
+export type { TestExecutionReport, TestSuite, TestExecutionResult }

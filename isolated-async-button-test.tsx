@@ -41,7 +41,7 @@ describe('Isolated ManualAsyncButton Test', () => {
     
     // Check loading state
     await waitFor(() => {
-      expect(screen.getByText('Creating...')).toBeInTheDocument()
+      expect(screen.getByText('Creating...')).toBeTruthy()
       console.log('✅ Loading state detected')
     }, { timeout: 1000 })
     
@@ -50,9 +50,9 @@ describe('Isolated ManualAsyncButton Test', () => {
     
     console.log('⏳ Waiting for success state...')
     
-    // Check success state  
+    // Check success state
     await waitFor(() => {
-      expect(screen.getByText('Created successfully!')).toBeInTheDocument()
+      expect(screen.getByText('Created successfully!')).toBeTruthy()
       console.log('✅ Success state detected')
     }, { timeout: 3000 })
     

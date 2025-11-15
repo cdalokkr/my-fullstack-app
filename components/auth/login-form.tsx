@@ -91,12 +91,11 @@ export function LoginForm() {
         localStorage.setItem('userProfile', JSON.stringify(data.profile))
         sessionStorage.setItem('sessionProfile', JSON.stringify(data.profile))
 
-        // Start dashboard prefetch in background for admin users
+        // Start profile/session cache for all users
+        // NOTE: Removed dashboard prefetch - dashboard now uses real-time data
         if (data.profile.role === 'admin') {
-          // Fire-and-forget prefetch - don't wait for completion
-          dashboardPrefetcher.prefetchDashboardData().catch((error) => {
-            console.warn('Dashboard prefetch failed, but login continues:', error)
-          })
+          // Dashboard data will be fetched fresh in real-time, no prefetch needed
+          console.log('Admin user logged in - dashboard will use real-time data')
         }
 
         // Redirect based on user role

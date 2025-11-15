@@ -152,10 +152,13 @@ class CacheInvalidationSystem {
       clearTimeout(existingTimer);
     }
 
+    // Use immediate processing for user-action events to ensure instant cache invalidation
+    const debounceDelay = event.type === 'user-action' ? 0 : this.config.debounceTime;
+
     const timer = setTimeout(() => {
       this.processInvalidationEvent(event);
       this.debounceTimers.delete(debounceKey);
-    }, this.config.debounceTime);
+    }, debounceDelay);
 
     this.debounceTimers.set(debounceKey, timer);
 
@@ -342,6 +345,25 @@ class CacheInvalidationSystem {
       'manual',
       reason || `Namespace ${namespace} invalidated`
     );
+  }
+  invalidatePattern(pattern: string, type: CacheInvalidationEvent['type'], reason?: string, metadata?: Record<string, unknown>): void {
+    console.log(`🔄 Invalidating cache entries matching pattern: ${pattern}`)
+    
+    // For pattern-based invalidation, we'll create a special event
+    // that triggers all matching rules
+    const event: CacheInvalidationEvent = {
+      type,
+      key: pattern,
+      timestamp: Date.now(),
+      reason: reason || `Pattern invalidation: ${pattern}`,
+      metadata: { pattern, ...metadata }
+    }
+
+    // Process the event immediately for pattern invalidation
+    this.processInvalidationEvent(event)
+    
+    // Notify listeners
+    this.notifyEventListeners(event)
   }
 
   // Cleanup method

@@ -46,12 +46,10 @@ export function SimpleAsyncButton({
 
   useEffect(() => {
     if (autoReset && state === 'success') {
-      // Commented out auto-reset to prevent user confusion during redirections
-      // Success state now persists until user manually takes action
-      // const timer = setTimeout(() => {
-      //   setState('idle');
-      // }, successDuration);
-      // return () => clearTimeout(timer);
+      const timer = setTimeout(() => {
+        setState('idle');
+      }, successDuration);
+      return () => clearTimeout(timer);
     }
   }, [state, autoReset, successDuration]);
   

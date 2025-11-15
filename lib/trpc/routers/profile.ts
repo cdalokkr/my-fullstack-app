@@ -13,6 +13,10 @@ export const profileRouter = router({
   update: protectedProcedure
     .input(profileUpdateSchema)
     .mutation(async ({ input, ctx }) => {
+      if (!ctx.supabase) {
+        throw new Error('Database service unavailable')
+      }
+      
       const { data, error } = await ctx.supabase
         .from('profiles')
         .update(input)
@@ -35,6 +39,10 @@ export const profileRouter = router({
   getActivities: protectedProcedure
     .input(z.object({ limit: z.number().default(10) }))
     .query(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Database service unavailable')
+      }
+      
       const { data } = await ctx.supabase
         .from('activities')
         .select('*')

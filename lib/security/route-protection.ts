@@ -117,7 +117,7 @@ export class RouteProtectionManager {
     
     // 1. Check rate limiting first
     if (config.requireRateLimit) {
-      const rateLimitResponse = await this.checkRateLimit(request, config, path)
+      const rateLimitResponse = await this.checkRateLimit(request, config, path, requestId)
       if (rateLimitResponse) {
         return rateLimitResponse
       }
@@ -158,7 +158,7 @@ export class RouteProtectionManager {
   }
 
   // Check rate limiting
-  private async checkRateLimit(request: NextRequest, config: RouteProtectionConfig, path: string): Promise<NextResponse | null> {
+  private async checkRateLimit(request: NextRequest, config: RouteProtectionConfig, path: string, requestId: string): Promise<NextResponse | null> {
     try {
       let limiter = generalApiRateLimiter
       
@@ -246,11 +246,12 @@ export class RouteProtectionManager {
       }
       
       // Role-based access control
-      const hasAccess = this.checkRoleAccess(validation.session!.user.role, config.securityLevel)
+      const userRole = validation.session!.user.role || 'user'
+      const hasAccess = this.checkRoleAccess(userRole, config.securityLevel)
       if (!hasAccess) {
         await this.logSecurityEvent('insufficient_privileges', {
           userId: validation.session!.user.id,
-          userRole: validation.session!.user.role,
+          userRole,
           requiredLevel: config.securityLevel,
           path: request.nextUrl.pathname,
           requestId
@@ -259,7 +260,10 @@ export class RouteProtectionManager {
       }
       
       return {
-        user: validation.session!.user,
+        user: {
+          ...validation.session!.user,
+          role: userRole
+        },
         session: validation.session,
         securityLevel: config.securityLevel,
         requestId,
@@ -365,7 +369,8 @@ export class RouteProtectionManager {
       return realIP
     }
     
-    return request.ip || 'unknown'
+    // Fallback to a default IP for development
+    return '127.0.0.1'
   }
 
   private ipInRange(ip: string, range: string): boolean {

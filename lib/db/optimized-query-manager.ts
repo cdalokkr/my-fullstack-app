@@ -130,10 +130,16 @@ export class OptimizedQueryManager {
     const { analyticsDays = 7, activitiesLimit = 10, useCache = true } = options
     const queryHash = hashQuery('dashboard_metrics_unified', { analyticsDays, activitiesLimit })
     
+    type DashboardMetricsResult = {
+      critical: { totalUsers: number; activeUsers: number }
+      secondary: { totalActivities: number; todayActivities: number; analytics: any[] }
+      detailed: { recentActivities: any[] }
+    }
+    
     try {
       // Check cache first
       if (useCache) {
-        const cached = getCachedQuery(queryHash)
+        const cached = getCachedQuery<DashboardMetricsResult>(queryHash)
         if (cached) {
           recordQueryMetrics({
             queryType: 'getDashboardMetricsUnified',
@@ -200,25 +206,25 @@ export class OptimizedQueryManager {
         activeUsersResult.data?.map((a: any) => a.user_id).filter(Boolean) || []
       )
       
-      const result = {
-        critical: {
-          totalUsers: profilesResult.count || 0,
-          activeUsers: uniqueUsers.size
-        },
-        secondary: {
-          totalActivities: activitiesResult.count || 0,
-          todayActivities: todayActivitiesResult.count || 0,
-          analytics: analyticsResult.data || []
-        },
-        detailed: {
-          recentActivities: recentActivitiesResult.data || []
+      const result: DashboardMetricsResult = {
+          critical: {
+            totalUsers: profilesResult.count || 0,
+            activeUsers: uniqueUsers.size
+          },
+          secondary: {
+            totalActivities: activitiesResult.count || 0,
+            todayActivities: todayActivitiesResult.count || 0,
+            analytics: analyticsResult.data || []
+          },
+          detailed: {
+            recentActivities: recentActivitiesResult.data || []
+          }
         }
-      }
-      
-      // Cache the result
-      if (useCache) {
-        setCachedQuery(queryHash, result, 15 * 1000) // 15 seconds cache
-      }
+        
+        // Cache the result
+        if (useCache) {
+          setCachedQuery<DashboardMetricsResult>(queryHash, result, 15 * 1000) // 15 seconds cache
+        }
       
       recordQueryMetrics({
         queryType: 'getDashboardMetricsUnified',
@@ -253,10 +259,16 @@ export class OptimizedQueryManager {
     const offset = (page - 1) * limit
     const queryHash = hashQuery('users_optimized', { page, limit, role, search })
     
+    type UsersResult = {
+      users: any[]
+      total: number
+      hasMore: boolean
+    }
+    
     try {
       // Check cache for basic queries
       if (useCache && !search && !role) {
-        const cached = getCachedQuery(queryHash)
+        const cached = getCachedQuery<UsersResult>(queryHash)
         if (cached) {
           recordQueryMetrics({
             queryType: 'getUsersOptimized',
@@ -302,7 +314,7 @@ export class OptimizedQueryManager {
       
       if (error) throw error
       
-      const result = {
+      const result: UsersResult = {
         users: data || [],
         total: count || 0,
         hasMore: (count || 0) > offset + limit
@@ -310,7 +322,7 @@ export class OptimizedQueryManager {
       
       // Cache the result
       if (useCache && !search && !role) {
-        setCachedQuery(queryHash, result, 60 * 1000) // 1 minute cache
+        setCachedQuery<UsersResult>(queryHash, result, 60 * 1000) // 1 minute cache
       }
       
       recordQueryMetrics({
@@ -348,10 +360,16 @@ export class OptimizedQueryManager {
     const offset = (page - 1) * limit
     const queryHash = hashQuery('activities_optimized', { page, limit, userId, activityType, dateFrom, dateTo })
     
+    type ActivitiesResult = {
+      activities: any[]
+      total: number
+      hasMore: boolean
+    }
+    
     try {
       // Check cache for basic queries
       if (useCache && !userId && !activityType && !dateFrom && !dateTo) {
-        const cached = getCachedQuery(queryHash)
+        const cached = getCachedQuery<ActivitiesResult>(queryHash)
         if (cached) {
           recordQueryMetrics({
             queryType: 'getActivitiesOptimized',
@@ -405,7 +423,7 @@ export class OptimizedQueryManager {
       
       if (error) throw error
       
-      const result = {
+      const result: ActivitiesResult = {
         activities: data || [],
         total: count || 0,
         hasMore: (count || 0) > offset + limit
@@ -413,7 +431,7 @@ export class OptimizedQueryManager {
       
       // Cache the result
       if (useCache && !userId && !activityType && !dateFrom && !dateTo) {
-        setCachedQuery(queryHash, result, 30 * 1000) // 30 seconds cache
+        setCachedQuery<ActivitiesResult>(queryHash, result, 30 * 1000) // 30 seconds cache
       }
       
       recordQueryMetrics({
@@ -446,10 +464,16 @@ export class OptimizedQueryManager {
     const { dateRange, groupBy = 'day', useCache = true } = options
     const queryHash = hashQuery('complex_statistics', { dateRange, groupBy })
     
+    type ComplexStatisticsResult = {
+      userGrowth: any[]
+      activityStats: any[]
+      topUsers: any[]
+    }
+    
     try {
       // Check cache
       if (useCache) {
-        const cached = getCachedQuery(queryHash)
+        const cached = getCachedQuery<ComplexStatisticsResult>(queryHash)
         if (cached) {
           recordQueryMetrics({
             queryType: 'getComplexStatistics',
@@ -499,7 +523,7 @@ export class OptimizedQueryManager {
       ])
       
       // Process results
-      const result = {
+      const result: ComplexStatisticsResult = {
         userGrowth: userGrowth.data || [],
         activityStats: activityStats.data || [],
         topUsers: topUsers.data || []
@@ -507,7 +531,7 @@ export class OptimizedQueryManager {
       
       // Cache the result
       if (useCache) {
-        setCachedQuery(queryHash, result, 5 * 60 * 1000) // 5 minutes cache for complex stats
+        setCachedQuery<ComplexStatisticsResult>(queryHash, result, 5 * 60 * 1000) // 5 minutes cache for complex stats
       }
       
       recordQueryMetrics({

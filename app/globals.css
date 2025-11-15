@@ -268,7 +268,8 @@
   }
 }
 
-button:active {
+
+button:active:not([data-slot="accordion-trigger"]) {
   transform: scale(0.97);
 }
 

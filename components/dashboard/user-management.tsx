@@ -36,11 +36,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import AsyncButton from '@/components/ui/async-button'
 import { UserOperationModalState } from './user-operation-modal-overlay'
-import { EnhancedAddUserModal } from './EnhancedAddUserModal'
+import { ModernAddUserForm } from './ModernAddUserForm'
 import toast from 'react-hot-toast'
 
 export default function UserManagement() {
-  const [showEnhancedAddUserModal, setShowEnhancedAddUserModal] = useState(false)
+  const [showAddUserSheet, setShowAddUserSheet] = useState(false)
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
   const [tempFirstName, setTempFirstName] = useState('')
   const [tempLastName, setTempLastName] = useState('')
@@ -97,22 +97,17 @@ export default function UserManagement() {
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    try {
-      // Update role
-      await updateRoleMutation.mutateAsync({
-        userId: editingUserId,
-        role: tempRole,
-      })
-      // Update profile fields
-      await updateProfileMutation.mutateAsync({
-        userId: editingUserId,
-        firstName: tempFirstName.trim(),
-        lastName: tempLastName.trim(),
-      })
-    } catch (error) {
-      // Error is handled by mutations' onError callbacks
-      throw error
-    }
+    // Update role
+    await updateRoleMutation.mutateAsync({
+      userId: editingUserId,
+      role: tempRole,
+    })
+    // Update profile fields
+    await updateProfileMutation.mutateAsync({
+      userId: editingUserId,
+      firstName: tempFirstName.trim(),
+      lastName: tempLastName.trim(),
+    })
   }
 
   const handleCancelEdit = () => {
@@ -143,16 +138,16 @@ export default function UserManagement() {
   
 
   return (
-    <div className="space-y-4">
+    <div className="px-4 sm:px-6 lg:px-8 space-y-6">
       {/* Header - matching admin dashboard style */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center bg-white/50 backdrop-blur-sm rounded-lg p-4 border border-border/20">
         <div>
           <h2 className="text-xl font-bold tracking-tight">User Management</h2>
           <p className="text-muted-foreground text-sm">Manage user accounts and permissions</p>
         </div>
         <Button
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-          onClick={() => setShowEnhancedAddUserModal(true)}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+          onClick={() => setShowAddUserSheet(true)}
           aria-label="Create new user"
         >
           <span className="inline-flex items-center justify-center w-4 h-4 mr-2">
@@ -372,15 +367,19 @@ export default function UserManagement() {
         </CardContent>
       </Card>
 
-      {/* Enhanced Add User Modal */}
-      <EnhancedAddUserModal
-        open={showEnhancedAddUserModal}
-        onOpenChange={setShowEnhancedAddUserModal}
+      {/* Modern Add User Form with Built-in Sheet */}
+      <ModernAddUserForm
+        open={showAddUserSheet}
+        onOpenChange={setShowAddUserSheet}
+        useSheet={true}
         onSuccess={() => {
           refetch()
           utils.admin.users.getUsers.invalidate()
           utils.admin.dashboard.getCriticalDashboardData.invalidate()
         }}
+        title="Add New User"
+        description="Create a new user account with proper access permissions"
+        refetch={refetch}
       />
     </div>
   )

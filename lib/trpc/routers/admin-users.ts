@@ -17,6 +17,10 @@ export const adminUsersRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Supabase client not available')
+      }
+      
       let query = ctx.supabase
         .from('profiles')
         .select('*', { count: 'exact' })
@@ -48,6 +52,10 @@ export const adminUsersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Supabase client not available')
+      }
+      
       const { data, error } = await ctx.supabase
         .from('profiles')
         .update({ role: input.role })
@@ -78,6 +86,10 @@ export const adminUsersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Supabase client not available')
+      }
+      
       const updateData: Partial<Pick<Profile, 'first_name' | 'last_name' | 'mobile_no' | 'date_of_birth' | 'updated_at'>> = {}
       if (input.firstName !== undefined) updateData.first_name = input.firstName
       if (input.lastName !== undefined) updateData.last_name = input.lastName
@@ -107,6 +119,10 @@ export const adminUsersRouter = router({
   deleteUser: adminProcedure
     .input(z.object({ userId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Supabase client not available')
+      }
+      
       // Delete profile (cascade will handle related records)
       const { error } = await ctx.supabase
         .from('profiles')
@@ -128,6 +144,10 @@ export const adminUsersRouter = router({
   createUser: adminProcedure
     .input(createUserSchema)
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Supabase client not available')
+      }
+      
       // Check if user already exists
       const { data: existingProfile } = await ctx.supabase
         .from('profiles')
@@ -191,6 +211,10 @@ export const adminUsersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Supabase client not available')
+      }
+      
       const { data, error } = await ctx.supabase
         .from('profiles')
         .select('id')

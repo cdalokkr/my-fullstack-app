@@ -52,8 +52,14 @@ export class SecureSessionManager {
   constructor(config?: Partial<SecureSessionConfig>) {
     // Convert secret to Uint8Array for jose
     const secret = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex')
+    const jwtSecret = config?.jwtSecret
+      ? (typeof config.jwtSecret === 'string'
+         ? new TextEncoder().encode(config.jwtSecret)
+         : config.jwtSecret)
+      : new TextEncoder().encode(secret)
+    
     this.config = {
-      jwtSecret: new TextEncoder().encode(secret),
+      ...config,
       accessTokenExpiry: 15 * 60, // 15 minutes
       refreshTokenExpiry: 7 * 24 * 60 * 60, // 7 days
       maxConcurrentSessions: 5,
@@ -61,8 +67,13 @@ export class SecureSessionManager {
       requireDeviceFingerprint: true,
       enableSessionRotation: true,
       sessionTimeoutWarningMinutes: 5,
-      ...config
+      jwtSecret: jwtSecret // Always Uint8Array
     }
+  }
+  
+  // Helper to ensure jwtSecret is always Uint8Array
+  private getJwtSecret(): Uint8Array {
+    return this.config.jwtSecret as Uint8Array
   }
 
   // Create a new secure session
@@ -96,9 +107,9 @@ export class SecureSessionManager {
       .setIssuer('my-fullstack-app')
       .setAudience('authenticated-users')
       .setExpirationTime(payload.exp)
-      .sign(this.config.jwtSecret)
+      .sign(this.getJwtSecret())
 
-    const refreshToken = this.generateRefreshToken(user.id, sessionId)
+    const refreshToken = await this.generateRefreshToken(user.id, sessionId)
 
     const sessionToken: SessionToken = {
       access_token: accessToken,
@@ -140,7 +151,7 @@ export class SecureSessionManager {
   }> {
     try {
       // Verify and decode token
-      const { payload: decoded } = await jwtVerify(accessToken, this.config.jwtSecret, {
+      const { payload: decoded } = await jwtVerify(accessToken, this.getJwtSecret(), {
         algorithms: ['HS256'],
         issuer: 'my-fullstack-app',
         audience: 'authenticated-users'
@@ -214,7 +225,7 @@ export class SecureSessionManager {
   }> {
     try {
       // Verify refresh token
-      const { payload: decoded } = await jwtVerify(refreshToken, this.config.jwtSecret, {
+      const { payload: decoded } = await jwtVerify(refreshToken, this.getJwtSecret(), {
         algorithms: ['HS256'],
         issuer: 'my-fullstack-app',
         audience: 'refresh-tokens'
@@ -244,7 +255,7 @@ export class SecureSessionManager {
         .setIssuer('my-fullstack-app')
         .setAudience('authenticated-users')
         .setExpirationTime(payload.exp)
-        .sign(this.config.jwtSecret)
+        .sign(this.getJwtSecret())
 
       // Update session
       session.token.access_token = newAccessToken
@@ -369,7 +380,7 @@ export class SecureSessionManager {
   }
 
   // Helper methods
-  private generateRefreshToken(userId: string, sessionId: string): string {
+  private async generateRefreshToken(userId: string, sessionId: string): Promise<string> {
     const payload = {
       sub: userId,
       sessionId,
@@ -378,12 +389,12 @@ export class SecureSessionManager {
       exp: Math.floor(Date.now() / 1000) + this.config.refreshTokenExpiry
     }
 
-    return new SignJWT(payload)
+    return await new SignJWT(payload)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuer('my-fullstack-app')
       .setAudience('refresh-tokens')
       .setExpirationTime(payload.exp)
-      .sign(this.config.jwtSecret)
+      .sign(this.getJwtSecret())
   }
 
   private getClientIP(request: Request): string {

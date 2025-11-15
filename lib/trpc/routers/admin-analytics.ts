@@ -12,6 +12,10 @@ export const adminAnalyticsRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Supabase client not available')
+      }
+      
       const { data } = await ctx.supabase
         .from('analytics_metrics')
         .select('*')
@@ -23,6 +27,10 @@ export const adminAnalyticsRouter = router({
 
   // Analytics endpoints
   getCriticalAnalyticsData: adminProcedure.query(async ({ ctx }) => {
+    if (!ctx.supabase) {
+      throw new Error('Supabase client not available')
+    }
+    
     // Tier 1: Critical analytics KPIs
     const now = new Date()
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
@@ -69,6 +77,10 @@ export const adminAnalyticsRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Supabase client not available')
+      }
+      
       // Tier 2: Secondary analytics data - charts and trends
       const startDate = new Date(Date.now() - input.days * 24 * 60 * 60 * 1000)
 
@@ -121,6 +133,10 @@ export const adminAnalyticsRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Supabase client not available')
+      }
+      
       // Tier 3: Detailed analytics data for drill-down
       const startDate = new Date(input.dateRange.start)
       const endDate = new Date(input.dateRange.end)

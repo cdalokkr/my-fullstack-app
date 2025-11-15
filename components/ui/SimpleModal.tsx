@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { SimpleAsyncButton } from './SimpleAsyncButton';
+import { AdvancedAsyncButton } from './advanced-async-button';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -161,17 +161,16 @@ export function SimpleModal({
           )}
           
           {onSubmit && (
-            <SimpleAsyncButton
+            <AdvancedAsyncButton
               onClick={handleSubmit}
               loadingText={submitLoadingText}
               successText={submitSuccessText}
               successDuration={autoCloseDuration}
               disabled={isSubmitting || isSuccess}
-              fullWidth={!showCancelButton}
               className="w-full sm:w-auto"
             >
               {submitText}
-            </SimpleAsyncButton>
+            </AdvancedAsyncButton>
           )}
         </DialogFooter>
       </DialogContent>

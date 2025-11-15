@@ -130,67 +130,65 @@ export const adminDashboardRouter = router({
         // Execute all queries in a single optimized batch
         const queries = [
           // Critical metrics (users and active users)
-          () => {
+          async () => {
             if (!ctx.supabase) throw new Error('Supabase client not available')
-            return ctx.supabase
+            const result = await ctx.supabase
               .from('profiles')
               .select('id, user_id, role', { count: 'exact' })
-              .then(result => ({ ...result, query: 'totalUsers' }))
+            return { ...result, query: 'totalUsers' }
           },
           
-          () => {
+          async () => {
             if (!ctx.supabase) throw new Error('Supabase client not available')
-            return ctx.supabase
+            const result = await ctx.supabase
               .from('activities')
               .select('user_id')
               .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-              .then(result => {
-                const uniqueUsers = new Set(result.data?.map(a => a.user_id).filter(Boolean) || [])
-                return { count: uniqueUsers.size, query: 'activeUsers' }
-              })
+            const uniqueUsers = new Set(result.data?.map(a => a.user_id).filter(Boolean) || [])
+            return { count: uniqueUsers.size, query: 'activeUsers' }
           },
           
           // Activity metrics
-          () => {
+          async () => {
             if (!ctx.supabase) throw new Error('Supabase client not available')
-            return ctx.supabase
+            const result = await ctx.supabase
               .from('activities')
               .select('*', { count: 'exact' })
-              .then(result => ({ ...result, query: 'totalActivities' }))
+            return { ...result, query: 'totalActivities' }
           },
           
-          () => {
+          async () => {
             if (!ctx.supabase) throw new Error('Supabase client not available')
-            return ctx.supabase
+            const result = await ctx.supabase
               .from('activities')
               .select('*', { count: 'exact' })
               .gte('created_at', new Date().toISOString().split('T')[0])
-              .then(result => ({ ...result, query: 'todayActivities' }))
+            return { ...result, query: 'todayActivities' }
           },
           
           // Analytics data (if priority is freshness or if analytics table exists)
           ...(input.priority === 'freshness' ? [
-            () => {
+            async () => {
               if (!ctx.supabase) throw new Error('Supabase client not available')
-              return ctx.supabase
+              const result = await ctx.supabase
                 .from('analytics_metrics')
                 .select('*')
                 .gte('metric_date', new Date(Date.now() - input.analyticsDays * 24 * 60 * 60 * 1000).toISOString())
                 .order('metric_date', { ascending: true })
-                .then(result => ({ ...result, query: 'analytics' }))
+              return { ...result, query: 'analytics' }
             }
           ] : []),
           
           // Recent activities (if priority is freshness)
           ...(input.priority === 'freshness' ? [
-            () => {
+            async () => {
               if (!ctx.supabase) throw new Error('Supabase client not available')
-              return ctx.supabase
+              const result = await ctx.supabase
                 .from('activities')
                 .select('*, profiles(email, full_name)')
                 .order('created_at', { ascending: false })
                 .limit(input.activitiesLimit)
-                .then(result => ({ ...result, query: 'recentActivities' }))
+              return { ...result, query: 'recentActivities' }
             }
           ] : [])
         ]
@@ -342,40 +340,40 @@ export const adminDashboardRouter = router({
           recentResult,
           activeUsersResult
         ] = await executeOptimizedQueries(ctx, [
-          () => {
+          async () => {
             if (!ctx.supabase) throw new Error('Supabase client not available')
-            return ctx.supabase.from('profiles').select('*', { count: 'exact', head: true })
+            return await ctx.supabase.from('profiles').select('*', { count: 'exact', head: true })
           },
-          () => {
+          async () => {
             if (!ctx.supabase) throw new Error('Supabase client not available')
-            return ctx.supabase.from('activities').select('*', { count: 'exact', head: true })
+            return await ctx.supabase.from('activities').select('*', { count: 'exact', head: true })
           },
-          () => {
+          async () => {
             if (!ctx.supabase) throw new Error('Supabase client not available')
-            return ctx.supabase
+            return await ctx.supabase
               .from('activities')
               .select('*', { count: 'exact', head: true })
               .gte('created_at', new Date().toISOString().split('T')[0])
           },
-          () => {
+          async () => {
             if (!ctx.supabase) throw new Error('Supabase client not available')
-            return ctx.supabase
+            return await ctx.supabase
               .from('analytics_metrics')
               .select('*')
               .gte('metric_date', new Date(Date.now() - input.analyticsDays * 24 * 60 * 60 * 1000).toISOString())
               .order('metric_date', { ascending: true })
           },
-          () => {
+          async () => {
             if (!ctx.supabase) throw new Error('Supabase client not available')
-            return ctx.supabase
+            return await ctx.supabase
               .from('activities')
               .select('*, profiles(email, full_name)')
               .order('created_at', { ascending: false })
               .limit(input.activitiesLimit)
           },
-          () => {
+          async () => {
             if (!ctx.supabase) throw new Error('Supabase client not available')
-            return ctx.supabase
+            return await ctx.supabase
               .from('activities')
               .select('user_id')
               .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())

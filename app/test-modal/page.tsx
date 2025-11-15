@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { SimpleModal } from '@/components/ui/SimpleModal';
-import { SimpleAsyncButton } from '@/components/ui/SimpleAsyncButton';
+import { AdvancedAsyncButton } from '@/components/ui/advanced-async-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -114,15 +114,15 @@ export default function TestModalPage() {
               <div className="space-y-3">
                 <h4 className="font-semibold text-sm">Basic Async Operations</h4>
                 
-                <SimpleAsyncButton
+                <AdvancedAsyncButton
                   onClick={() => simulateAsyncOperation(1000)}
-                  variant="default"
+                  variant="primary"
                   className="w-full"
                 >
                   Quick Save (1s)
-                </SimpleAsyncButton>
+                </AdvancedAsyncButton>
 
-                <SimpleAsyncButton
+                <AdvancedAsyncButton
                   onClick={() => simulateAsyncOperation(3000)}
                   loadingText="Processing..."
                   successText="Completed!"
@@ -130,9 +130,9 @@ export default function TestModalPage() {
                   className="w-full"
                 >
                   Long Process (3s)
-                </SimpleAsyncButton>
+                </AdvancedAsyncButton>
 
-                <SimpleAsyncButton
+                <AdvancedAsyncButton
                   onClick={() => simulateAsyncOperation(1500)}
                   loadingText="Creating user..."
                   successText="User created!"
@@ -141,7 +141,7 @@ export default function TestModalPage() {
                   className="w-full"
                 >
                   Create User
-                </SimpleAsyncButton>
+                </AdvancedAsyncButton>
               </div>
 
               <Separator />
@@ -149,17 +149,17 @@ export default function TestModalPage() {
               <div className="space-y-3">
                 <h4 className="font-semibold text-sm">Different Variants</h4>
                 
-                <SimpleAsyncButton
+                <AdvancedAsyncButton
                   onClick={() => simulateAsyncOperation(1000)}
                   loadingText="Deleting..."
                   successText="Deleted!"
-                  variant="destructive"
+                  variant="danger"
                   className="w-full"
                 >
                   Delete Item
-                </SimpleAsyncButton>
+                </AdvancedAsyncButton>
 
-                <SimpleAsyncButton
+                <AdvancedAsyncButton
                   onClick={() => simulateAsyncOperation(2000)}
                   loadingText="Uploading..."
                   successText="Uploaded!"
@@ -168,18 +168,18 @@ export default function TestModalPage() {
                   className="w-full"
                 >
                   Upload File
-                </SimpleAsyncButton>
+                </AdvancedAsyncButton>
 
-                <SimpleAsyncButton
+                <AdvancedAsyncButton
                   onClick={() => simulateAsyncOperation(800)}
                   loadingText="Syncing..."
                   successText="Synced!"
-                  variant="link"
+                  variant="ghost"
                   size="lg"
                   className="w-full"
                 >
                   Sync Data
-                </SimpleAsyncButton>
+                </AdvancedAsyncButton>
               </div>
             </CardContent>
           </Card>
@@ -196,7 +196,7 @@ export default function TestModalPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <SimpleAsyncButton
+              <AdvancedAsyncButton
                 onClick={() => setIsModalOpen(true)}
                 loadingText="Opening modal..."
                 successText="Modal opened!"
@@ -204,7 +204,7 @@ export default function TestModalPage() {
                 className="w-full"
               >
                 Open Test Modal
-              </SimpleAsyncButton>
+              </AdvancedAsyncButton>
 
               <Separator />
 
@@ -363,7 +363,7 @@ export default function TestModalPage() {
           <div className="space-y-2">
             <p className="text-sm font-medium">Alternative Actions:</p>
             <div className="flex gap-2">
-              <SimpleAsyncButton
+              <AdvancedAsyncButton
                 onClick={simulateFormSubmit}
                 loadingText="Saving..."
                 successText="Saved!"
@@ -372,7 +372,7 @@ export default function TestModalPage() {
                 className="flex-1"
               >
                 Save Draft
-              </SimpleAsyncButton>
+              </AdvancedAsyncButton>
               
               <Button
                 variant="outline"

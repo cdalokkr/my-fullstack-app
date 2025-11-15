@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useProgressiveDashboardData } from '@/hooks/use-progressive-dashboard-data'
+import { useComprehensiveRealtimeDashboard } from '@/hooks/use-realtime-dashboard-data'
 import { ErrorBoundary, LoadingFallback } from '@/components/ui/error-boundary'
-import { EnhancedAddUserModal } from './EnhancedAddUserModal'
+import { ModernAddUserForm } from './ModernAddUserForm'
 import {
   Users,
   Activity,
@@ -41,7 +41,7 @@ function MetricCardSkeleton({ title, description, icon, iconBgColor, iconColor, 
 }) {
   return (
     <Card
-      className={`group shadow-lg bg-muted/30 border-2 ${borderColor || 'border-transparent'}`}
+      className={`group shadow-lg bg-muted/30 border-2 ${borderColor || 'border-transparent'} transition-all duration-300`}
       role="region"
       aria-label={`${title} metric card loading`}
     >
@@ -50,14 +50,23 @@ function MetricCardSkeleton({ title, description, icon, iconBgColor, iconColor, 
       </CardHeader>
       <CardContent className="pt-0">
         <div className="flex items-center gap-2">
-          <div className={`p-1.5 rounded-full ${iconBgColor || 'bg-gray-100'}`}>
-            {icon}
+          <div className={`p-1.5 rounded-full ${iconBgColor || 'bg-gray-100'} group-hover:bg-opacity-80 transition-all duration-300`}>
+            {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, {
+              className: `h-8 w-8 ${iconColor || 'text-muted-foreground'} animate-pulse`,
+              'aria-hidden': true
+            }) : (
+              <div className="h-8 w-8 animate-pulse bg-gray-200 rounded-full" />
+            )}
           </div>
-          <div className="text-2xl font-bold text-muted-foreground animate-pulse">
-            ---
+          <div className="text-2xl font-bold">
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-block w-3 h-3 bg-gradient-to-r from-transparent via-current to-transparent rounded-full animate-pulse"></span>
+              <span className="inline-block w-2 h-3 bg-gradient-to-b from-transparent via-current to-transparent rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></span>
+              <span className="inline-block w-3 h-3 bg-gradient-to-r from-transparent via-current to-transparent rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></span>
+            </span>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">{description}</p>
+        <p className="text-sm mt-1">{description}</p>
       </CardContent>
     </Card>
   )
@@ -85,7 +94,7 @@ function MetricCard({ title, value, description, icon, loading, iconBgColor, ico
 
   return (
     <Card
-      className={`group shadow-lg bg-muted/30 border-2 ${borderColor || 'border-transparent'} group-hover:${borderHoverColor}`}
+      className={`group shadow-lg bg-muted/30 border-2 ${borderColor || 'border-transparent'} group-hover:${borderHoverColor} transition-all duration-300`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       role="region"
@@ -97,13 +106,13 @@ function MetricCard({ title, value, description, icon, loading, iconBgColor, ico
       </CardHeader>
       <CardContent className="pt-0">
         <div className="flex items-center gap-2">
-          <div className={`p-1.5 rounded-full ${iconBgColor || 'bg-gray-100'} group-hover:bg-opacity-80`}>
+          <div className={`p-1.5 rounded-full ${iconBgColor || 'bg-gray-100'} group-hover:bg-opacity-80 transition-all duration-300`}>
             {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, {
-              className: `h-8 w-8 ${isHovered ? iconColorHover : (iconColor || 'text-muted-foreground')}`,
+              className: `h-8 w-8 ${isHovered ? iconColorHover : (iconColor || 'text-muted-foreground')} transition-all duration-300`,
               'aria-hidden': true
             }) : icon}
           </div>
-          <div className="text-2xl font-bold" aria-live="polite">
+          <div className="text-2xl font-bold transition-all duration-500 ease-in-out" aria-live="polite">
             {value}
           </div>
         </div>
@@ -114,45 +123,37 @@ function MetricCard({ title, value, description, icon, loading, iconBgColor, ico
 }
 
 export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading: boolean) => void }) {
-  const [showEnhancedAddUserModal, setShowEnhancedAddUserModal] = useState(false)
+  const [showAddUserSheet, setShowAddUserSheet] = useState(false)
 
   const {
-    criticalData,
-    secondaryData,
-    detailedData,
-    comprehensiveData,
+    stats,
+    recentActivities,
+    analytics,
+    activeUsers,
     isLoading,
     isError,
-    errors,
-    refetch
-  } = useProgressiveDashboardData()
+    error,
+    refetch,
+    magicCardsDataReady,
+    recentActivityDataReady
+  } = useComprehensiveRealtimeDashboard()
 
   // Track overall loading state for parent component
-  const isAnyLoading = isLoading.critical || isLoading.secondary || isLoading.detailed
-
   useEffect(() => {
-    onLoadingChange?.(isAnyLoading)
-  }, [isAnyLoading, onLoadingChange])
-
-  // Calculate active users from analytics data when available
-  const activeUsers = secondaryData?.analytics?.reduce((acc, metric) => {
-    if (metric.metric_name === 'active_users') {
-      return acc + metric.metric_value
-    }
-    return acc
-  }, 0) || criticalData?.activeUsers || 0
+    onLoadingChange?.(isLoading)
+  }, [isLoading, onLoadingChange])
 
   // Overall error state
-  if (isError.critical && !criticalData) {
+  if (isError && !stats.totalUsers && !stats.totalActivities && !stats.todayActivities) {
     return (
       <div className="space-y-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Failed to load critical dashboard data. Please try refreshing the page.
+            Failed to load dashboard data. Please try refreshing the page.
           </AlertDescription>
         </Alert>
-        <Button onClick={refetch.critical} variant="outline">
+        <Button onClick={refetch} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
           Retry
         </Button>
@@ -176,10 +177,10 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
         <Link href="/admin/users/all" className="block">
           <MetricCard
             title="Total Users"
-            value={criticalData?.totalUsers || 0}
+            value={magicCardsDataReady ? stats.totalUsers : 0}
             description="Registered users"
             icon={<Users className="h-4 w-4 text-muted-foreground" />}
-            loading={isLoading.critical}
+            loading={!magicCardsDataReady}
             iconBgColor="bg-blue-100"
             iconColor="text-blue-600"
             borderColor="border-blue-200"
@@ -187,30 +188,30 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
         </Link>
         <MetricCard
           title="Active Users"
-          value={activeUsers}
+          value={magicCardsDataReady ? activeUsers : 0}
           description="Active in last 7 days"
           icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
-          loading={isLoading.critical}
+          loading={!magicCardsDataReady}
           iconBgColor="bg-green-100"
           iconColor="text-green-600"
           borderColor="border-green-200"
         />
         <MetricCard
           title="Total Activities"
-          value={secondaryData?.totalActivities || 0}
+          value={magicCardsDataReady ? stats.totalActivities : 0}
           description="All user activities"
           icon={<Activity className="h-4 w-4 text-muted-foreground" />}
-          loading={isLoading.secondary}
+          loading={!magicCardsDataReady}
           iconBgColor="bg-purple-100"
           iconColor="text-purple-600"
           borderColor="border-purple-200"
         />
         <MetricCard
-          title="Today's Activities"
-          value={secondaryData?.todayActivities || 0}
+          title="Today's Activity"
+          value={magicCardsDataReady ? stats.todayActivities : 0}
           description="Activities today"
-          icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
-          loading={isLoading.secondary}
+          icon={<Activity className="h-4 w-4 text-muted-foreground" />}
+          loading={!magicCardsDataReady}
           iconBgColor="bg-orange-100"
           iconColor="text-orange-600"
           borderColor="border-orange-200"
@@ -229,7 +230,7 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
               variant="outline"
               size="touch"
               className="group bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300 "
-              onClick={() => setShowEnhancedAddUserModal(true)}
+              onClick={() => setShowAddUserSheet(true)}
             >
               <span className="inline-flex items-center justify-center p-1 rounded-full bg-blue-100 mr-2 transition-colors duration-300 group-hover:bg-blue-200">
                 <UserPlus className="h-4 w-4 text-blue-600 transition-colors duration-300 group-hover:text-blue-700" />
@@ -264,21 +265,21 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
         </CardContent>
       </Card>
 
-      {/* Recent Activities - Load after secondary data */}
-      {secondaryData && (
-        <div data-testid="detailed-content">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activities</CardTitle>
-              <CardDescription>Latest user activities</CardDescription>
-            </CardHeader>
-            <CardContent>
+      {/* Recent Activities - Layout visible immediately, data loads after */}
+      <div data-testid="detailed-content">
+        <Card className="shadow-lg bg-muted/30">
+          <CardHeader>
+            <CardTitle>Recent Activities</CardTitle>
+            <CardDescription>Latest user activities</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentActivityDataReady && recentActivities && recentActivities.length > 0 ? (
               <div className="space-y-2">
-                {detailedData?.recentActivities
+                {recentActivities
                   ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                   ?.slice(0, 10)
                   ?.map((activity) => (
-                  <div key={activity.id} className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50">
+                  <div key={activity.id} className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50 transition-all duration-300">
                     <Activity className="h-4 w-4 text-muted-foreground" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">{activity.description}</p>
@@ -289,18 +290,36 @@ export function AdminOverview({ onLoadingChange }: { onLoadingChange?: (loading:
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            ) : (
+              // Loading skeleton for recent activities
+              <div className="space-y-2">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50 animate-pulse">
+                    <div className="h-4 w-4 bg-gray-200 rounded-full" />
+                    <div className="flex-1 space-y-1">
+                      <div className="h-3 bg-gray-200 rounded w-3/4" />
+                      <div className="h-2 bg-gray-200 rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Enhanced Add User Modal */}
-      <EnhancedAddUserModal
-        open={showEnhancedAddUserModal}
-        onOpenChange={setShowEnhancedAddUserModal}
+      {/* Modern Add User Form with Built-in Sheet */}
+      <ModernAddUserForm
+        open={showAddUserSheet}
+        onOpenChange={setShowAddUserSheet}
+        useSheet={true}
         onSuccess={() => {
-          refetch.all()
+          // Real-time dashboard will automatically refresh via event listeners
+          refetch()
         }}
+        title="Add New User"
+        description="Create a new user account with proper access permissions"
+        refetch={refetch}
       />
 
     </div>

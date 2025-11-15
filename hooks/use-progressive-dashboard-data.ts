@@ -105,6 +105,11 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
   const prefetchPromiseRef = useRef<Promise<any> | null>(null)
 
   // State to track prefetch completion for reactivity
+  // State to manage magic cards loading states for UI coordination
+  const [magicCardsDataReady, setMagicCardsDataReady] = useState(true)
+  const [recentActivityDataReady, setRecentActivityDataReady] = useState(true)
+
+
   const [prefetchCompleted, setPrefetchCompleted] = useState(dashboardPrefetcher.hasPrefetchCompleted())
 
   // Create TTL calculation context
@@ -235,6 +240,7 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
   // Set up cache invalidation listeners and prefetch completion tracking
   useEffect(() => {
     const handleInvalidation = (event: { key?: string; namespace?: string }) => {
+      console.log('🎯 Dashboard cache invalidation triggered:', event)
       if (event.key?.includes('dashboard') || event.namespace === 'dashboard') {
         // Invalidate relevant cache entries
         if (event.key?.includes('critical')) {
@@ -258,6 +264,79 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
     cacheInvalidation.addEventListener('user-action', handleInvalidation)
     cacheInvalidation.addEventListener('data-change', handleInvalidation)
     cacheInvalidation.addEventListener('cross-tab', handleInvalidation)
+    
+    // NEW: Listen for comprehensive refresh events (logout/login mechanism)
+    window.addEventListener('user-operation-complete', (event: any) => {
+      console.log('🔄 USER OPERATION COMPLETE EVENT:', event.detail)
+
+      // For user creation events, use smart invalidation to preserve prefetched data
+      if (event.detail?.operation === 'user-creation' && event.detail?.refreshDashboard && event.detail?.smartInvalidation) {
+        console.log('👤 USER CREATION: Smart invalidation mode - updating all magic cards simultaneously')
+
+        // Only invalidate user-related metrics, preserve comprehensive-dashboard-data
+        smartCacheManager.delete('critical-dashboard-data', 'dashboard')
+        smartCacheManager.delete('stats', 'dashboard')
+
+        // Reset magic cards loading state to trigger simultaneous update
+        setMagicCardsDataReady(false)
+        setRecentActivityDataReady(false)
+
+        // Force refetch of all queries to ensure consistent state
+        setTimeout(() => {
+          Promise.all([
+            Promise.resolve(criticalQuery.refetch()),
+            Promise.resolve(secondaryQuery.refetch()),
+            Promise.resolve(detailedQuery.refetch())
+          ]).then(() => {
+            // After all queries complete, re-enable magic cards
+            setTimeout(() => {
+              setMagicCardsDataReady(true)
+            }, 100)
+          })
+        }, 50) // Small delay to ensure cache clearing completes
+
+      } else if (event.detail?.smartInvalidation) {
+        console.log('🎯 SMART INVALIDATION MODE: Preserving prefetched data, updating user metrics only')
+
+        // Only invalidate user-related metrics, preserve comprehensive-dashboard-data
+        smartCacheManager.delete('critical-dashboard-data', 'dashboard')
+        smartCacheManager.delete('stats', 'dashboard')
+
+        // Reset magic cards loading state to trigger simultaneous update
+        setMagicCardsDataReady(false)
+
+        // Force refetch of critical data only (user counts, etc.)
+        if (event.detail?.refreshDashboard) {
+          setTimeout(() => {
+            Promise.resolve(criticalQuery.refetch()).then(() => {
+              setTimeout(() => {
+                setMagicCardsDataReady(true)
+              }, 100)
+            })
+          }, 100)
+        }
+
+      } else if (event.detail?.refreshDashboard) {
+        console.log('🔄 COMPREHENSIVE REFRESH MODE: Clearing all caches (logout/login behavior)')
+
+        // Traditional comprehensive invalidation - clear everything
+        smartCacheManager.invalidateNamespace('dashboard')
+
+        // Reset magic cards loading state
+        setMagicCardsDataReady(false)
+        setRecentActivityDataReady(false)
+
+        // Force immediate refetch of all data using enhanced mechanism
+        setTimeout(() => {
+          // Call enhanced refetchAll directly
+          enhancedRefetchAll().then(() => {
+            setTimeout(() => {
+              setMagicCardsDataReady(true)
+            }, 100)
+          })
+        }, 100) // Small delay to ensure cache clearing completes
+      }
+    })
 
     // Listen for prefetch completion events
     dashboardPrefetcher.prefetchDashboardData().then(() => {
@@ -270,6 +349,7 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
       cacheInvalidation.removeEventListener('user-action', handleInvalidation)
       cacheInvalidation.removeEventListener('data-change', handleInvalidation)
       cacheInvalidation.removeEventListener('cross-tab', handleInvalidation)
+      // Note: Anonymous event listener - no cleanup needed for inline handlers
     }
   }, [])
 
@@ -542,6 +622,47 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
     })
   }, [refetchCritical, refetchComprehensive, debouncedRefetch])
 
+  // NEW: Comprehensive refresh function that simulates logout/login behavior
+  const triggerComprehensiveRefresh = useCallback(() => {
+    console.log('🔄 TRIGGERING COMPREHENSIVE REFRESH: Exact logout/login full page refresh simulation')
+    
+    // STEP 1: Clear ALL cache entries (mimicking full page refresh)
+    smartCacheManager.delete('critical-dashboard-data', 'dashboard')
+    smartCacheManager.delete('secondary-dashboard-data', 'dashboard')
+    smartCacheManager.delete('detailed-dashboard-data', 'dashboard')
+    smartCacheManager.delete('comprehensive-dashboard-data', 'dashboard')
+    smartCacheManager.delete('stats', 'dashboard')
+    
+    // STEP 2: Invalidate entire dashboard namespace (equivalent to clearing all browser data)
+    smartCacheManager.invalidateNamespace('dashboard')
+    
+    // STEP 3: Clear localStorage and sessionStorage (full browser refresh effect)
+    try {
+      localStorage.clear()
+      sessionStorage.clear()
+    } catch (error) {
+      console.warn('Error clearing storage during refresh:', error)
+    }
+    
+    // STEP 4: Force refetch all queries with small delays to ensure proper sequencing
+    // This mimics what happens when React Query resets after page refresh
+    setTimeout(() => criticalQuery.refetch(), 50)
+    setTimeout(() => secondaryQuery.refetch(), 100)
+    setTimeout(() => detailedQuery.refetch(), 150)
+    setTimeout(() => comprehensiveQuery.refetch(), 200)
+  }, [criticalQuery, secondaryQuery, detailedQuery, comprehensiveQuery])
+  
+  // Use this comprehensive refresh for user creation and other major operations
+  const enhancedRefetchAll = useCallback(() => {
+    return new Promise<void>((resolve) => {
+      debouncedRefetch(() => {
+        triggerComprehensiveRefresh()
+        // Resolve after a small delay to allow the refresh to start
+        setTimeout(() => resolve(), 100)
+      })
+    })
+  }, [triggerComprehensiveRefresh, debouncedRefetch])
+
   // Memoize the state to prevent unnecessary re-renders
   const state = useMemo(() => {
     console.log('Building dashboard state:', {
@@ -603,6 +724,8 @@ export function useProgressiveDashboardData(): ProgressiveDashboardDataState {
         detailed: refetchDetailed,
         all: refetchAll,
         comprehensive: comprehensiveQuery.refetch,
+        // NEW: Add comprehensive refresh function that simulates logout/login
+        comprehensiveRefresh: enhancedRefetchAll,
       },
       cacheStatus,
       // Include comprehensive data for components that can use it

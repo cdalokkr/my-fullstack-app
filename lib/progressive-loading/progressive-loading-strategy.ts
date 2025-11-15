@@ -460,7 +460,8 @@ export class ProgressiveLoadingStrategy {
         progress: Math.min(100, ((this.loadingState.loadedItems + 1) / this.loadingState.totalItems) * 100)
       })
 
-      return data
+      // At this point, data must be non-null (either from cache or network)
+      return data!
 
     } catch (error) {
       return this.handleLoadError(dataKey, dataLoader, priority, error as Error)

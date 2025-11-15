@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { SimpleAsyncButton } from '@/components/ui/SimpleAsyncButton';
+import { AdvancedAsyncButton } from '@/components/ui/advanced-async-button';
 import { EnhancedAsyncButton } from '@/components/ui/EnhancedAsyncButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -45,24 +45,24 @@ export default function AsyncButtonTestPage() {
             <CardContent className="space-y-4">
               <div>
                 <h4 className="font-semibold mb-2">Success Test</h4>
-                <SimpleAsyncButton
-                  onClick={() => handleSuccessTest('SimpleAsyncButton')}
+                <AdvancedAsyncButton
+                  onClick={() => handleSuccessTest('AdvancedAsyncButton')}
                   successText="Success!"
                   loadingText="Loading..."
                 >
                   Test Success (should stay green)
-                </SimpleAsyncButton>
+                </AdvancedAsyncButton>
               </div>
               
               <div>
                 <h4 className="font-semibold mb-2">Error Test</h4>
-                <SimpleAsyncButton
-                  onClick={() => handleErrorTest('SimpleAsyncButton')}
+                <AdvancedAsyncButton
+                  onClick={() => handleErrorTest('AdvancedAsyncButton')}
                   successText="Success!"
                   loadingText="Loading..."
                 >
                   Test Error (should reset after 3s)
-                </SimpleAsyncButton>
+                </AdvancedAsyncButton>
               </div>
             </CardContent>
           </Card>

@@ -43,6 +43,7 @@ export interface AsyncButtonProps extends React.ComponentProps<'button'> {
   size?: 'sm' | 'md' | 'lg' | 'default' | 'icon';
   /** Whether to use adaptive width calculation to prevent visual shifting */
   customWidth?: boolean;
+  
 }
 
 export default function AsyncButton({
@@ -157,7 +158,7 @@ export default function AsyncButton({
         // Users can click again once the state naturally clears (e.g., after redirection)
         const successDur = successDuration || duration;
         if (autoReset) {
-          // setTimeout(() => setState('idle'), successDur); // Commented out to prevent reset on success
+          // setTimeout(() => setInternalState('idle'), successDur); // Commented out to prevent reset on success
         }
       }
     } catch (error) {
@@ -387,3 +388,4 @@ export function SubmitButton({ successDuration = 2000, ...props }: Omit<AsyncBut
     />
   );
 }
+

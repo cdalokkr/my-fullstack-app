@@ -554,5 +554,4 @@ class LoadingStateManager {
 // Export singleton instance
 export const loadingStateManager = new LoadingStateManager()
 
-// Export types for external use
-export type { UnifiedLoadingState }
+// Note: UnifiedLoadingState is already exported above as an interface

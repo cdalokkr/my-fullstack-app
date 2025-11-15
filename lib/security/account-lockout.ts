@@ -72,8 +72,8 @@ export class AccountLockoutManager {
       }
 
       // Check for current lockout
-      const activeLockout = violations.find(v => 
-        v.violation_type === 'brute_force' && 
+      const activeLockout = violations.find((v: SecurityViolation) =>
+        v.violation_type === 'brute_force' &&
         new Date(v.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)
       )
 
@@ -210,7 +210,7 @@ export class AccountLockoutManager {
 
   // Calculate severity based on violation type and frequency
   private calculateSeverity(violationType: SecurityViolation['violation_type'], attemptsCount: number): SecurityViolation['severity'] {
-    const severityMap = {
+    const severityMap: Record<SecurityViolation['violation_type'], SecurityViolation['severity']> = {
       'brute_force': 'critical',
       'account_takeover': 'critical',
       'invalid_session': 'medium',
@@ -223,9 +223,9 @@ export class AccountLockoutManager {
     // Escalate severity based on attempt count
     if (attemptsCount >= 10) return 'critical'
     if (attemptsCount >= 5) return 'high'
-    if (attemptsCount >= 3) return baseSeverity === 'low' ? 'medium' : baseSeverity
+    if (attemptsCount >= 3) return (baseSeverity === 'low' ? 'medium' : baseSeverity) as SecurityViolation['severity']
 
-    return baseSeverity
+    return baseSeverity as SecurityViolation['severity']
   }
 
   // Get lockout duration based on attempt count

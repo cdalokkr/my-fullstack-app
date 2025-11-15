@@ -33,23 +33,19 @@ function DashboardContent({
 
   if (!profile) {
     return (
-      <div className="w-full h-full overflow-auto">
-        <div className="min-h-full p-4 md:p-6 lg:p-8 flex items-center justify-center">
-          <div className="bg-background/50 backdrop-blur-sm rounded-lg border border-border/20 shadow-sm p-6 md:p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4">Profile not found</h2>
-            <p className="text-muted-foreground">Unable to load your profile information.</p>
-          </div>
+      <div className="p-4 md:p-6 lg:p-8 flex items-center justify-center">
+        <div className="bg-background/50 backdrop-blur-sm rounded-lg border border-border/20 shadow-sm p-6 md:p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">Profile not found</h2>
+          <p className="text-muted-foreground">Unable to load your profile information.</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="w-full h-full overflow-auto">
-      <div className="min-h-full p-4 md:p-6 lg:p-8 space-y-6 scroll-smooth-touch mobile-optimized">
-        <div className="bg-background/50 backdrop-blur-sm rounded-lg border border-border/20 shadow-sm p-6 md:p-8">
-          {profile.role === 'admin' ? <AdminOverview onLoadingChange={onLoadingChange} /> : <UserOverview profile={profile} onLoadingChange={onLoadingChange} />}
-        </div>
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
+      <div className="bg-background/50 backdrop-blur-sm rounded-lg border border-border/20 shadow-sm p-6 md:p-8">
+        {profile.role === 'admin' ? <AdminOverview onLoadingChange={onLoadingChange} /> : <UserOverview profile={profile} onLoadingChange={onLoadingChange} />}
       </div>
     </div>
   )
@@ -300,9 +296,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           onTenantSwitch={handleTenantSwitch}
           user={currentUser}
         />
-        <SidebarInset className="flex flex-col min-h-screen">
+        <SidebarInset className="flex flex-col h-screen overflow-hidden">
           <TopBar user={currentUser} />
-          <div className="flex-1 w-full pt-6 pb-4 px-4">
+          <div className="flex-1 overflow-y-auto pt-6 pb-4 px-4 scroll-smooth">
             {children || <DashboardContent profile={profile} isLoading={profileLoading} onLoadingChange={handleLoadingChange} />}
           </div>
           <StatusBar />

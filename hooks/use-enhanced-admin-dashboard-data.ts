@@ -171,17 +171,30 @@ export function useEnhancedAdminDashboardData(): EnhancedAdminDashboardDataState
     { analyticsDays: 7, activitiesLimit: 10 },
     {
       staleTime: 30 * 1000, // 30 seconds
-      refetchOnWindowFocus: false,
-      queryFn: async () => {
-        const result = await enhancedDataFetch()
-        return result
-      }
+      refetchOnWindowFocus: false
     }
   )
 
   // Memoized state computation
   const state = useMemo((): EnhancedAdminDashboardDataState => {
-    const data = comprehensiveQuery.data || {
+    // Transform the tRPC data to match our interface or use fallback
+    const transformedData: EnhancedAdminDashboardData = {
+      stats: comprehensiveQuery.data?.stats || null,
+      analytics: comprehensiveQuery.data?.analytics || null,
+      recentActivities: comprehensiveQuery.data?.recentActivities || null,
+      metadata: {
+        hydrationTime: 0,
+        transformationTime: 0,
+        cacheHit: false,
+        dataVersion: '1.0.0',
+        performance: {
+          totalLoadTime: 0,
+          components: {}
+        }
+      }
+    }
+
+    const data = comprehensiveQuery.data ? transformedData : {
       stats: null,
       analytics: null,
       recentActivities: null,
@@ -295,11 +308,13 @@ export function useBatchAdminOperations() {
           
         case 'export-data':
           // Export performance and cache data
-          const exportData = {
-            timestamp: new Date().toISOString(),
-            message: 'Export data operation'
+          {
+            const exportData = {
+              timestamp: new Date().toISOString(),
+              message: 'Export data operation'
+            }
+            console.log('Export data:', exportData)
           }
-          console.log('Export data:', exportData)
           break
           
         default:

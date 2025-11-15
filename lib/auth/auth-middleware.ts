@@ -123,8 +123,7 @@ export async function authMiddleware(request: NextRequest) {
     recordAuthEndpointTiming({
       method: request.method,
       endpoint: path,
-      status: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      status: 'error'
     }, startTime)
     
     console.error('[AUTH-MW] Middleware error:', error)

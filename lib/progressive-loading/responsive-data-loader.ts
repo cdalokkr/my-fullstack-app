@@ -224,7 +224,10 @@ class ResponsiveDataLoader {
         entries.forEach((entry) => {
           if (entry.entryType === 'navigation') {
             // Monitor page load performance
-            console.log('Page load time:', entry.loadEventEnd - entry.loadEventStart)
+            const navEntry = entry as PerformanceNavigationTiming
+            if (navEntry.loadEventEnd && navEntry.loadEventStart) {
+              console.log('Page load time:', navEntry.loadEventEnd - navEntry.loadEventStart)
+            }
           } else if (entry.entryType === 'resource') {
             // Monitor resource loading performance
             const resourceEntry = entry as PerformanceResourceTiming
@@ -324,7 +327,7 @@ class ResponsiveDataLoader {
     priority: DataPriority,
     dataKey: string
   ): () => Promise<T> {
-    return async () => {
+    return () => {
       const dataSizeLimit = this.getOptimalDataSizeLimit()
       const batchSize = this.getOptimalBatchSize()
       const shouldCompress = this.config.enableCompression && this.getNetworkCompressionPreference()
@@ -335,7 +338,7 @@ class ResponsiveDataLoader {
         batchSize,
         shouldCompress,
         priority
-      })
+      })()
     }
   }
 
@@ -365,24 +368,25 @@ class ResponsiveDataLoader {
       priority: DataPriority
     }
   ): () => Promise<T> {
-    return async () => {
+    return () => {
       const startTime = performance.now()
       
-      try {
-        // Execute the original request
-        const data = await originalRequest()
-        
-        // Apply responsive optimizations
-        const optimizedData = this.applyDataOptimizations(data, options)
-        
-        const loadTime = performance.now() - startTime
-        console.log(`Optimized request completed in ${loadTime.toFixed(2)}ms`)
-        
-        return optimizedData as T
-      } catch (error) {
-        console.error('Optimized request failed:', error)
-        throw error
-      }
+      return new Promise<T>((resolve, reject) => {
+        originalRequest()
+          .then(data => {
+            // Apply responsive optimizations
+            const optimizedData = this.applyDataOptimizations(data, options)
+            
+            const loadTime = performance.now() - startTime
+            console.log(`Optimized request completed in ${loadTime.toFixed(2)}ms`)
+            
+            resolve(optimizedData as T)
+          })
+          .catch(error => {
+            console.error('Optimized request failed:', error)
+            reject(error)
+          })
+      })
     }
   }
 
