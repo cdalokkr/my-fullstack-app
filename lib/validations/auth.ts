@@ -74,6 +74,7 @@ export const createUserSchema = z.object({
       message: 'Password must be at least 8 characters and meet at least 3 of the following criteria: uppercase letter, lowercase letter, number, special character',
     }),
   firstName: z.string().min(1, 'First name is required').max(50, 'First name too long'),
+  middleName: z.string().max(50, 'Middle name too long').optional().or(z.literal('')),
   lastName: z.string().min(1, 'Last name is required').max(50, 'Last name too long'),
   mobileNo: z.string()
     .regex(/^(\+?\d{1,3})?[-.\s]?(\(?\d{1,4}\)?)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{0,4}$/, 'Invalid mobile number format')
@@ -90,9 +91,38 @@ export const createUserSchema = z.object({
     .optional()
     .or(z.literal('')),
   role: z.enum(['admin', 'user']),
+  sex: z.enum(['Male', 'Female']),
 })
 
 export type CreateUserInput = z.infer<typeof createUserSchema>
+
+// Schema for editing existing users (without password requirement)
+export const editUserSchema = z.object({
+  firstName: z.string().min(1, 'First name is required').max(50, 'First name too long'),
+  middleName: z.string().max(50, 'Middle name too long').optional().or(z.literal('')),
+  lastName: z.string().min(1, 'Last name is required').max(50, 'Last name too long'),
+  email: z.string()
+    .min(1, 'Email is required')
+    .email('Invalid email address'),
+  mobileNo: z.string()
+    .regex(/^(\+?\d{1,3})?[-.\s]?(\(?\d{1,4}\)?)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{0,4}$/, 'Invalid mobile number format')
+    .optional()
+    .or(z.literal('')),
+  dateOfBirth: z.string()
+    .refine((val) => {
+      if (!val) return true // optional field
+      const date = new Date(val)
+      const now = new Date()
+      const age = now.getFullYear() - date.getFullYear()
+      return date <= now && age >= 13 && age <= 120
+    }, { message: 'Please enter a valid date of birth (13-120 years old)' })
+    .optional()
+    .or(z.literal('')),
+  role: z.enum(['admin', 'user']),
+  sex: z.enum(['Male', 'Female']),
+})
+
+export type EditUserInput = z.infer<typeof editUserSchema>
 
 export type PasswordStrength = {
   isValid: boolean

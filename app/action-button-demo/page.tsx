@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { 
   ActionButton, 
@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { UserOperationModalOverlay } from '@/components/dashboard/user-operation-modal-overlay'
 import { DualLayerLoadingCoordinator } from '@/components/dashboard/dual-layer-loading-coordinator'
 import { LoadingPriority } from '@/components/ui/loading-states'
+import { UserOperationModalState } from '@/components/dashboard/user-operation-modal-overlay'
 import toast from 'react-hot-toast'
 
 /**
@@ -26,7 +27,7 @@ import toast from 'react-hot-toast'
  * with all variants, animations, and real-world usage examples.
  */
 export default function ActionButtonDemoPage() {
-  const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({})
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({})
   
   const handleAction = async (action: string) => {
     setLoadingStates(prev => ({ ...prev, [action]: true }))
@@ -49,7 +50,7 @@ export default function ActionButtonDemoPage() {
   return (
     <div className="min-h-screen bg-background p-8">
       {/* Modal overlay for operations */}
-      <UserOperationModalOverlay />
+      <UserOperationModalOverlay isVisible={false} state={UserOperationModalState.PROCESSING} />
       
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}

@@ -14,6 +14,7 @@ export const adminUsersRouter = router({
         limit: z.number().default(10),
         search: z.string().optional(),
         role: z.enum(['admin', 'user', 'all']).default('all'),
+        getAll: z.boolean().default(false), // New parameter to get all users at once
       })
     )
     .query(async ({ ctx, input }) => {
@@ -33,14 +34,26 @@ export const adminUsersRouter = router({
         query = query.eq('role', input.role)
       }
 
-      const { data, count } = await query
-        .order('created_at', { ascending: false })
-        .range((input.page - 1) * input.limit, input.page * input.limit - 1)
+      if (input.getAll) {
+        // Fetch all users without pagination
+        const { data, count } = await query.order('created_at', { ascending: false })
+        
+        return {
+          users: data || [],
+          total: count || 0,
+          pages: 1, // Single page when getting all
+        }
+      } else {
+        // Paginated fetching
+        const { data, count } = await query
+          .order('created_at', { ascending: false })
+          .range((input.page - 1) * input.limit, input.page * input.limit - 1)
 
-      return {
-        users: data || [],
-        total: count || 0,
-        pages: Math.ceil((count || 0) / input.limit),
+        return {
+          users: data || [],
+          total: count || 0,
+          pages: Math.ceil((count || 0) / input.limit),
+        }
       }
     }),
 
@@ -75,14 +88,31 @@ export const adminUsersRouter = router({
       return data
     }),
 
-  updateUserProfile: adminProcedure
+  // Consolidated update user mutation - handles both profile and role updates
+  updateUser: adminProcedure
     .input(
       z.object({
         userId: z.string().uuid(),
-        firstName: z.string().optional(),
-        lastName: z.string().optional(),
-        mobileNo: z.string().optional(),
-        dateOfBirth: z.string().optional(),
+        firstName: z.string().min(1, 'First name is required').max(50, 'First name too long'),
+        middleName: z.string().max(50, 'Middle name too long').optional().or(z.literal('')),
+        lastName: z.string().min(1, 'Last name is required').max(50, 'Last name too long'),
+        email: z.string().email('Invalid email address'),
+        mobileNo: z.string()
+          .regex(/^(\+?\d{1,3})?[-.\s]?(\(?\d{1,4}\)?)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{0,4}$/, 'Invalid mobile number format')
+          .optional()
+          .or(z.literal('')),
+        dateOfBirth: z.string()
+          .refine((val) => {
+            if (!val) return true // optional field
+            const date = new Date(val)
+            const now = new Date()
+            const age = now.getFullYear() - date.getFullYear()
+            return date <= now && age >= 13 && age <= 120
+          }, { message: 'Please enter a valid date of birth (13-120 years old)' })
+          .optional()
+          .or(z.literal('')),
+        role: z.enum(['admin', 'user']),
+        sex: z.enum(['Male', 'Female']),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -90,11 +120,94 @@ export const adminUsersRouter = router({
         throw new Error('Supabase client not available')
       }
       
-      const updateData: Partial<Pick<Profile, 'first_name' | 'last_name' | 'mobile_no' | 'date_of_birth' | 'updated_at'>> = {}
+      // Check if email is already taken by another user
+      const { data: existingProfile } = await ctx.supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', input.email)
+        .neq('id', input.userId)
+        .single()
+
+      if (existingProfile) {
+        throw new Error(`A user with email ${input.email} already exists`)
+      }
+
+      // Construct full_name from name components
+      const constructFullName = (firstName: string, middleName?: string, lastName?: string): string => {
+        const parts = [firstName]
+        
+        // Add middle name only if it's not empty
+        if (middleName && middleName.trim()) {
+          parts.push(middleName.trim())
+        }
+        
+        // Add last name only if it's not empty
+        if (lastName && lastName.trim()) {
+          parts.push(lastName.trim())
+        }
+        
+        return parts.filter(Boolean).join(' ')
+      }
+
+      const fullName = constructFullName(input.firstName, input.middleName, input.lastName)
+
+      const updateData: Partial<Pick<Profile, 'first_name' | 'middle_name' | 'last_name' | 'email' | 'mobile_no' | 'date_of_birth' | 'sex' | 'role' | 'full_name' | 'updated_at'>> = {
+        first_name: input.firstName,
+        middle_name: input.middleName || undefined,
+        last_name: input.lastName,
+        email: input.email,
+        mobile_no: input.mobileNo || undefined,
+        date_of_birth: input.dateOfBirth || undefined,
+        sex: input.sex,
+        role: input.role,
+        full_name: fullName,
+        updated_at: new Date().toISOString(),
+      }
+
+      const { data, error } = await ctx.supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', input.userId)
+        .select()
+        .single()
+
+      if (error) throw new Error(error.message)
+
+      await ctx.supabase.from('activities').insert({
+        user_id: ctx.user.id,
+        activity_type: 'data_edit',
+        description: 'Admin updated user',
+        metadata: { target_user_id: input.userId },
+      })
+
+      return data
+    }),
+
+  // Keep the old individual mutations for backward compatibility
+  updateUserProfile: adminProcedure
+    .input(
+      z.object({
+        userId: z.string().uuid(),
+        firstName: z.string().optional(),
+        middleName: z.string().optional(),
+        lastName: z.string().optional(),
+        mobileNo: z.string().optional(),
+        dateOfBirth: z.string().optional(),
+        sex: z.enum(['Male', 'Female']).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.supabase) {
+        throw new Error('Supabase client not available')
+      }
+      
+      const updateData: Partial<Pick<Profile, 'first_name' | 'middle_name' | 'last_name' | 'mobile_no' | 'date_of_birth' | 'sex' | 'updated_at'>> = {}
       if (input.firstName !== undefined) updateData.first_name = input.firstName
+      if (input.middleName !== undefined) updateData.middle_name = input.middleName
       if (input.lastName !== undefined) updateData.last_name = input.lastName
       if (input.mobileNo !== undefined) updateData.mobile_no = input.mobileNo
       if (input.dateOfBirth !== undefined) updateData.date_of_birth = input.dateOfBirth
+      if (input.sex !== undefined) updateData.sex = input.sex
       updateData.updated_at = new Date().toISOString()
 
       const { data, error } = await ctx.supabase
@@ -170,6 +283,25 @@ export const adminUsersRouter = router({
         throw new Error(`Failed to create auth user: ${authError.message}`)
       }
 
+      // Construct full_name from name components
+      const constructFullName = (firstName: string, middleName?: string, lastName?: string): string => {
+        const parts = [firstName]
+        
+        // Add middle name only if it's not empty
+        if (middleName && middleName.trim()) {
+          parts.push(middleName.trim())
+        }
+        
+        // Add last name only if it's not empty
+        if (lastName && lastName.trim()) {
+          parts.push(lastName.trim())
+        }
+        
+        return parts.filter(Boolean).join(' ')
+      }
+
+      const fullName = constructFullName(input.firstName, input.middleName, input.lastName)
+
       // Create the profile
       const { data: profileData, error: profileError } = await ctx.supabase
         .from('profiles')
@@ -178,9 +310,12 @@ export const adminUsersRouter = router({
           user_id: authData.user!.id,
           email: input.email,
           first_name: input.firstName,
+          middle_name: input.middleName,
           last_name: input.lastName,
+          full_name: fullName, // Include constructed full_name
           mobile_no: input.mobileNo,
           date_of_birth: input.dateOfBirth,
+          sex: input.sex,
           role: input.role,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

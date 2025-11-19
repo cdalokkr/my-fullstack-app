@@ -41,8 +41,8 @@ import {
   DeleteButton,
   AddButton
 } from '@/components/ui/action-button'
-import { UserOperationModalState } from './user-operation-modal-overlay'
-import { ModernAddUserForm } from './ModernAddUserForm'
+import { UserOperationModalState } from '@/components/dashboard/user-operation-modal-overlay'
+import { ModernAddUserForm } from '@/components/dashboard/ModernAddUserForm'
 import toast from 'react-hot-toast'
 
 /**
@@ -197,6 +197,8 @@ export default function UserManagementWithActionButton() {
                 <TableHead>Email</TableHead>
                 <TableHead>First Name</TableHead>
                 <TableHead>Last Name</TableHead>
+                <TableHead>Sex</TableHead>
+                <TableHead>Date of Birth</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -213,6 +215,12 @@ export default function UserManagementWithActionButton() {
                       </TableCell>
                       <TableCell>
                         <Skeleton className="h-4 w-20" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-16" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-24" />
                       </TableCell>
                       <TableCell>
                         <Skeleton className="h-4 w-16" />
@@ -271,6 +279,19 @@ export default function UserManagementWithActionButton() {
                         ) : (
                           user.last_name || '-'
                         )}
+                      </TableCell>
+                      <TableCell className="capitalize">
+                        {user.sex || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {user.date_of_birth 
+                          ? new Date(user.date_of_birth).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })
+                          : '-'
+                        }
                       </TableCell>
                       <TableCell className="capitalize">
                         {editingUserId === user.id ? (

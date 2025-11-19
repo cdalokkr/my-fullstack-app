@@ -1,10 +1,12 @@
 "use client";
 
 import React from 'react';
-import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, UserPlus, Edit, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type AsyncState = 'idle' | 'loading' | 'success' | 'error';
+
+export type ButtonMode = 'create' | 'edit';
 
 // Size configurations matching the ActionButton component
 const sizeConfigs = {
@@ -37,18 +39,21 @@ interface CreateUserButtonProps extends Omit<React.ComponentProps<'button'>, 'on
   children?: React.ReactNode;
   /** Button size variant */
   size?: 'sm' | 'md' | 'lg';
+  /** Button mode: create or edit */
+  mode?: ButtonMode;
 }
 
 export default function CreateUserButton({
   onClick,
-  loadingText = "Creating User...",
-  successText = "User Created Successfully!",
-  errorText = "Failed to create user",
+  loadingText,
+  successText,
+  errorText,
   asyncState = 'idle',
   disabled,
   children,
   className,
   size = 'lg', // Default to 'lg' for consistency with CancelButton
+  mode = 'create',
   ...props
 }: CreateUserButtonProps) {
   const handleClick = async () => {
@@ -58,31 +63,54 @@ export default function CreateUserButton({
 
   const sizeConfig = sizeConfigs[size];
 
+  // Default texts and styling based on mode
+  const defaultTexts = mode === 'create' ? {
+    loadingText: "Creating user ...",
+    successText: "User Created !! Successfull",
+    errorText: "Error (x) User Creation failed",
+    idleText: children || "Create User",
+    idleIcon: UserPlus,
+    idleBgClass: "bg-blue-600 hover:bg-blue-700",
+    successBgClass: "bg-green-600 cursor-not-allowed opacity-90",
+    errorBgClass: "bg-red-600 hover:bg-red-700",
+    loadingBgClass: "bg-gray-600 cursor-wait"
+  } : {
+    loadingText: "Updating...",
+    successText: "Update Successful!!",
+    errorText: "Error (x) Updation failed",
+    idleText: children || "Update User",
+    idleIcon: Save,
+    idleBgClass: "bg-green-600 hover:bg-green-700",
+    successBgClass: "bg-green-600 cursor-not-allowed opacity-90",
+    errorBgClass: "bg-red-600 hover:bg-red-700",
+    loadingBgClass: "bg-gray-600 cursor-wait"
+  };
+
   const getButtonContent = () => {
     switch (asyncState) {
       case 'loading':
         return {
-          text: loadingText,
+          text: loadingText || defaultTexts.loadingText,
           icon: <Loader2 className={cn(sizeConfig.icon, "animate-spin mr-2")} />,
-          className: "bg-gray-600 cursor-wait"
+          className: defaultTexts.loadingBgClass
         };
       case 'success':
         return {
-          text: successText,
+          text: successText || defaultTexts.successText,
           icon: <CheckCircle className={cn(sizeConfig.icon, "mr-2")} />,
-          className: "bg-green-600 cursor-not-allowed opacity-90"
+          className: defaultTexts.successBgClass
         };
       case 'error':
         return {
-          text: errorText,
+          text: errorText || defaultTexts.errorText,
           icon: <AlertCircle className={cn(sizeConfig.icon, "mr-2")} />,
-          className: "bg-red-600 hover:bg-red-700"
+          className: defaultTexts.errorBgClass
         };
       default:
         return {
-          text: children,
-          icon: <div className={cn(sizeConfig.icon, "mr-2")} />, // Placeholder for consistent spacing
-          className: "bg-blue-600 hover:bg-blue-700"
+          text: defaultTexts.idleText,
+          icon: <defaultTexts.idleIcon className={cn(sizeConfig.icon, "mr-2")} />,
+          className: defaultTexts.idleBgClass
         };
     }
   };

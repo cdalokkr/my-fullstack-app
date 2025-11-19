@@ -13,9 +13,11 @@ export interface Profile {
   avatar_url: string | null
   role: UserRole
   first_name?: string
+  middle_name?: string
   last_name?: string
   mobile_no?: string
   date_of_birth?: string
+  sex?: string
   created_at: string
   updated_at: string
 }

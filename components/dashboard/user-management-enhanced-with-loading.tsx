@@ -154,7 +154,9 @@ export function UserManagementEnhancedWithLoading() {
             email,
             password,
             firstName,
+            middleName: '',
             lastName,
+            sex: 'Male',
             role
           })
           setShowCreateForm(false)
